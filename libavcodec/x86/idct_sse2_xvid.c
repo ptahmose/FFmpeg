@@ -147,7 +147,7 @@ DECLARE_ASM_CONST(16, int32_t, walkenIdctRounders)[] = {
 
 #endif
 
-#define ROUND(x) "paddd   "MANGLE(x)
+#define ROUND(x) "paddd   "#x
 
 #define JZ(reg, to)                         \
     "testl     "reg","reg"            \n\t" \
@@ -182,12 +182,12 @@ DECLARE_ASM_CONST(16, int32_t, walkenIdctRounders)[] = {
     "movdqa       %%xmm3, %%xmm0      \n\t" \
     "pshufd   $0x11, %%xmm3, %%xmm1   \n\t" /* 4602 */ \
     "punpcklqdq   %%xmm0, %%xmm0      \n\t" /* 0246 */ \
-    "pmaddwd     "table", %%xmm0      \n\t" \
-    "pmaddwd  16+"table", %%xmm1      \n\t" \
+    "pmaddwd    ("#table"), %%xmm0    \n\t" \
+    "pmaddwd (16+"#table"), %%xmm1    \n\t" \
     "pshufd   $0xBB, %%xmm3, %%xmm2   \n\t" /* 5713 */ \
     "punpckhqdq   %%xmm3, %%xmm3      \n\t" /* 1357 */ \
-    "pmaddwd  32+"table", %%xmm2      \n\t" \
-    "pmaddwd  48+"table", %%xmm3      \n\t" \
+    "pmaddwd (32+"#table"), %%xmm2    \n\t" \
+    "pmaddwd (48+"#table"), %%xmm3    \n\t" \
     "paddd        %%xmm1, %%xmm0      \n\t" \
     "paddd        %%xmm3, %%xmm2      \n\t" \
     rounder",     %%xmm0              \n\t" \
@@ -201,8 +201,8 @@ DECLARE_ASM_CONST(16, int32_t, walkenIdctRounders)[] = {
     "1:                               \n\t"
 
 #define iLLM_HEAD                           \
-    "movdqa   "MANGLE(tan3)", "TAN3"  \n\t" \
-    "movdqa   "MANGLE(tan1)", "TAN1"  \n\t" \
+    "movdqa   %7, "TAN3"              \n\t" \
+    "movdqa   %8, "TAN1"              \n\t"
 
 ///IDCT pass on columns.
 #define iLLM_PASS(dct)                      \
@@ -227,12 +227,12 @@ DECLARE_ASM_CONST(16, int32_t, walkenIdctRounders)[] = {
     "movdqa   %%xmm3, %%xmm6          \n\t" \
     "psubsw   "TAN3", %%xmm3          \n\t" \
     "paddsw   %%xmm6, "TAN3"          \n\t" \
-    "movdqa   "MANGLE(sqrt2)", %%xmm4 \n\t" \
+    "movdqa      %10, %%xmm4          \n\t" \
     "pmulhw   %%xmm4, %%xmm3          \n\t" \
     "pmulhw   %%xmm4, "TAN3"          \n\t" \
     "paddsw   "TAN3", "TAN3"          \n\t" \
     "paddsw   %%xmm3, %%xmm3          \n\t" \
-    "movdqa   "MANGLE(tan2)", %%xmm7  \n\t" \
+    "movdqa       %9, %%xmm7          \n\t" \
     MOV_32_ONLY ROW2", "REG2"         \n\t" \
     MOV_32_ONLY ROW6", "REG6"         \n\t" \
     "movdqa   %%xmm7, %%xmm5          \n\t" \
@@ -297,12 +297,12 @@ DECLARE_ASM_CONST(16, int32_t, walkenIdctRounders)[] = {
     "movdqa   %%xmm3, %%xmm6          \n\t" \
     "psubsw   "TAN3", %%xmm3          \n\t" \
     "paddsw   %%xmm6, "TAN3"          \n\t" \
-    "movdqa   "MANGLE(sqrt2)", %%xmm4 \n\t" \
+    "movdqa      %10, %%xmm4          \n\t" \
     "pmulhw   %%xmm4, %%xmm3          \n\t" \
     "pmulhw   %%xmm4, "TAN3"          \n\t" \
     "paddsw   "TAN3", "TAN3"          \n\t" \
     "paddsw   %%xmm3, %%xmm3          \n\t" \
-    "movdqa   "MANGLE(tan2)", %%xmm5  \n\t" \
+    "movdqa      %9, %%xmm5           \n\t" \
     MOV_32_ONLY ROW2", "SREG2"        \n\t" \
     "pmulhw   "SREG2", %%xmm5         \n\t" \
     MOV_32_ONLY ROW0", "REG0"         \n\t" \
@@ -343,17 +343,17 @@ DECLARE_ASM_CONST(16, int32_t, walkenIdctRounders)[] = {
     "movdqa   %%xmm6, 4*16("dct")     \n\t" \
     "movdqa   "SREG2", 7*16("dct")    \n\t"
 
-inline void ff_idct_xvid_sse2(short *block)
+av_extern_inline void ff_idct_xvid_sse2(short *block)
 {
     __asm__ volatile(
-    "movq     "MANGLE(m127)", %%mm0                              \n\t"
-    iMTX_MULT("(%0)",     MANGLE(iTab1), ROUND(walkenIdctRounders),      PUT_EVEN(ROW0))
-    iMTX_MULT("1*16(%0)", MANGLE(iTab2), ROUND(walkenIdctRounders+1*16), PUT_ODD(ROW1))
-    iMTX_MULT("2*16(%0)", MANGLE(iTab3), ROUND(walkenIdctRounders+2*16), PUT_EVEN(ROW2))
+    "movq   (%1), %%mm0                              \n\t"
+    iMTX_MULT("(%0)",     %2, ROUND(%3+0*16), PUT_EVEN(ROW0))
+    iMTX_MULT("1*16(%0)", %4, ROUND(%3+1*16), PUT_ODD(ROW1))
+    iMTX_MULT("2*16(%0)", %5, ROUND(%3+2*16), PUT_EVEN(ROW2))
 
     TEST_TWO_ROWS("3*16(%0)", "4*16(%0)", "%%eax", "%%ecx", CLEAR_ODD(ROW3), CLEAR_EVEN(ROW4))
     JZ("%%eax", "1f")
-    iMTX_MULT("3*16(%0)", MANGLE(iTab4), ROUND(walkenIdctRounders+3*16), PUT_ODD(ROW3))
+     iMTX_MULT("3*16(%0)", %6, ROUND(%3+3*16), PUT_ODD(ROW3))
 
     TEST_TWO_ROWS("5*16(%0)", "6*16(%0)", "%%eax", "%%edx", CLEAR_ODD(ROW5), CLEAR_EVEN(ROW6))
     TEST_ONE_ROW("7*16(%0)", "%%esi", CLEAR_ODD(ROW7))
@@ -366,22 +366,23 @@ inline void ff_idct_xvid_sse2(short *block)
     iLLM_PASS_SPARSE("%0")
     "jmp 6f                                                      \n\t"
     "2:                                                          \n\t"
-    iMTX_MULT("4*16(%0)", MANGLE(iTab1), "#", PUT_EVEN(ROW4))
+    iMTX_MULT("4*16(%0)", %2, "#", PUT_EVEN(ROW4))
     "3:                                                          \n\t"
-    iMTX_MULT("5*16(%0)", MANGLE(iTab4), ROUND(walkenIdctRounders+4*16), PUT_ODD(ROW5))
+    iMTX_MULT("5*16(%0)", %6, ROUND(%3+4*16), PUT_ODD(ROW5))
     JZ("%%edx", "1f")
     "4:                                                          \n\t"
-    iMTX_MULT("6*16(%0)", MANGLE(iTab3), ROUND(walkenIdctRounders+5*16), PUT_EVEN(ROW6))
+    iMTX_MULT("6*16(%0)", %5, ROUND(%3+5*16), PUT_EVEN(ROW6))
     JZ("%%esi", "1f")
     "5:                                                          \n\t"
-    iMTX_MULT("7*16(%0)", MANGLE(iTab2), ROUND(walkenIdctRounders+5*16), PUT_ODD(ROW7))
+    iMTX_MULT("7*16(%0)", %4, ROUND(%3+5*16), PUT_ODD(ROW7))
 #if ARCH_X86_32
     iLLM_HEAD
 #endif
     iLLM_PASS("%0")
     "6:                                                          \n\t"
     : "+r"(block)
-    :
+    : "m"(*m127), "m"(*iTab1), "m"(*walkenIdctRounders), "m"(*iTab2), "m"(*iTab3), "m"(*iTab4),
+      "m"(*tan3), "m"(*tan1), "m"(*tan2), "m"(*sqrt2)
     : XMM_CLOBBERS("%xmm0" , "%xmm1" , "%xmm2" , "%xmm3" ,
                    "%xmm4" , "%xmm5" , "%xmm6" , "%xmm7" ,)
 #if ARCH_X86_64

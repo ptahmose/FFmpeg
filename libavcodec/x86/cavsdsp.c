@@ -215,7 +215,7 @@ static void cavs_idct8_add_mmx(uint8_t *dst, int16_t *block, int stride)
         "movq "#C", %%mm6           \n\t"\
         "pmullw %5, %%mm6           \n\t"\
         "movq "#D", %%mm7           \n\t"\
-        "pmullw "MANGLE(MUL2)", %%mm7\n\t"\
+        "pmullw "#MUL2", %%mm7      \n\t"\
         "psllw $3, "#E"             \n\t"\
         "psubw "#E", %%mm6          \n\t"\
         "psraw $3, "#E"             \n\t"\
@@ -254,7 +254,7 @@ static void cavs_idct8_add_mmx(uint8_t *dst, int16_t *block, int stride)
 #define QPEL_CAVSV3(A,B,C,D,E,F,OP,MUL2) \
         "movd (%0), "#F"            \n\t"\
         "movq "#C", %%mm6           \n\t"\
-        "pmullw "MANGLE(MUL2)", %%mm6\n\t"\
+        "pmullw "#MUL2", %%mm6      \n\t"\
         "movq "#D", %%mm7           \n\t"\
         "pmullw %5, %%mm7           \n\t"\
         "psllw $3, "#B"             \n\t"\
@@ -298,32 +298,32 @@ static void cavs_idct8_add_mmx(uint8_t *dst, int16_t *block, int stride)
         "punpcklbw %%mm7, %%mm2     \n\t"\
         "punpcklbw %%mm7, %%mm3     \n\t"\
         "punpcklbw %%mm7, %%mm4     \n\t"\
-        VOP(%%mm0, %%mm1, %%mm2, %%mm3, %%mm4, %%mm5, OP, MUL2)\
-        VOP(%%mm1, %%mm2, %%mm3, %%mm4, %%mm5, %%mm0, OP, MUL2)\
-        VOP(%%mm2, %%mm3, %%mm4, %%mm5, %%mm0, %%mm1, OP, MUL2)\
-        VOP(%%mm3, %%mm4, %%mm5, %%mm0, %%mm1, %%mm2, OP, MUL2)\
-        VOP(%%mm4, %%mm5, %%mm0, %%mm1, %%mm2, %%mm3, OP, MUL2)\
-        VOP(%%mm5, %%mm0, %%mm1, %%mm2, %%mm3, %%mm4, OP, MUL2)\
-        VOP(%%mm0, %%mm1, %%mm2, %%mm3, %%mm4, %%mm5, OP, MUL2)\
-        VOP(%%mm1, %%mm2, %%mm3, %%mm4, %%mm5, %%mm0, OP, MUL2)\
+        VOP(%%mm0, %%mm1, %%mm2, %%mm3, %%mm4, %%mm5, OP, (%6))\
+        VOP(%%mm1, %%mm2, %%mm3, %%mm4, %%mm5, %%mm0, OP, (%6))\
+        VOP(%%mm2, %%mm3, %%mm4, %%mm5, %%mm0, %%mm1, OP, (%6))\
+        VOP(%%mm3, %%mm4, %%mm5, %%mm0, %%mm1, %%mm2, OP, (%6))\
+        VOP(%%mm4, %%mm5, %%mm0, %%mm1, %%mm2, %%mm3, OP, (%6))\
+        VOP(%%mm5, %%mm0, %%mm1, %%mm2, %%mm3, %%mm4, OP, (%6))\
+        VOP(%%mm0, %%mm1, %%mm2, %%mm3, %%mm4, %%mm5, OP, (%6))\
+        VOP(%%mm1, %%mm2, %%mm3, %%mm4, %%mm5, %%mm0, OP, (%6))\
         \
         : "+a"(src), "+c"(dst)\
-        : "S"((x86_reg)srcStride), "r"((x86_reg)dstStride), "m"(ADD), "m"(MUL1)\
+        : "S"((x86_reg)srcStride), "r"((x86_reg)dstStride), "m"(ADD), "m"(MUL1), "m"(MUL2)\
         : "memory"\
      );\
      if(h==16){\
         __asm__ volatile(\
-            VOP(%%mm2, %%mm3, %%mm4, %%mm5, %%mm0, %%mm1, OP, MUL2)\
-            VOP(%%mm3, %%mm4, %%mm5, %%mm0, %%mm1, %%mm2, OP, MUL2)\
-            VOP(%%mm4, %%mm5, %%mm0, %%mm1, %%mm2, %%mm3, OP, MUL2)\
-            VOP(%%mm5, %%mm0, %%mm1, %%mm2, %%mm3, %%mm4, OP, MUL2)\
-            VOP(%%mm0, %%mm1, %%mm2, %%mm3, %%mm4, %%mm5, OP, MUL2)\
-            VOP(%%mm1, %%mm2, %%mm3, %%mm4, %%mm5, %%mm0, OP, MUL2)\
-            VOP(%%mm2, %%mm3, %%mm4, %%mm5, %%mm0, %%mm1, OP, MUL2)\
-            VOP(%%mm3, %%mm4, %%mm5, %%mm0, %%mm1, %%mm2, OP, MUL2)\
+            VOP(%%mm2, %%mm3, %%mm4, %%mm5, %%mm0, %%mm1, OP, (%6))\
+            VOP(%%mm3, %%mm4, %%mm5, %%mm0, %%mm1, %%mm2, OP, (%6))\
+            VOP(%%mm4, %%mm5, %%mm0, %%mm1, %%mm2, %%mm3, OP, (%6))\
+            VOP(%%mm5, %%mm0, %%mm1, %%mm2, %%mm3, %%mm4, OP, (%6))\
+            VOP(%%mm0, %%mm1, %%mm2, %%mm3, %%mm4, %%mm5, OP, (%6))\
+            VOP(%%mm1, %%mm2, %%mm3, %%mm4, %%mm5, %%mm0, OP, (%6))\
+            VOP(%%mm2, %%mm3, %%mm4, %%mm5, %%mm0, %%mm1, OP, (%6))\
+            VOP(%%mm3, %%mm4, %%mm5, %%mm0, %%mm1, %%mm2, OP, (%6))\
             \
            : "+a"(src), "+c"(dst)\
-           : "S"((x86_reg)srcStride), "r"((x86_reg)dstStride), "m"(ADD),  "m"(MUL1)\
+           : "S"((x86_reg)srcStride), "r"((x86_reg)dstStride), "m"(ADD),  "m"(MUL1), "m"(MUL2)\
            : "memory"\
         );\
      }\

@@ -115,13 +115,13 @@ void ff_put_signed_pixels_clamped_mmx(const int16_t *block, uint8_t *pixels,
     x86_reg line_skip3;
 
     __asm__ volatile (
-        "movq "MANGLE(ff_pb_80)", %%mm0     \n\t"
+        "movq               (%4), %%mm0     \n\t"
         "lea         (%3, %3, 2), %1        \n\t"
         put_signed_pixels_clamped_mmx_half(0)
         "lea         (%0, %3, 4), %0        \n\t"
         put_signed_pixels_clamped_mmx_half(64)
         : "+&r"(pixels), "=&r"(line_skip3)
-        : "r"(block), "r"(line_skip)
+        : "r"(block), "r"(line_skip), "m"(ff_pb_80)
         : "memory");
 }
 
@@ -454,6 +454,7 @@ static av_always_inline void gmc(uint8_t *dst, uint8_t *src,
                 : "m"(*dxy4), "m"(*dyy4)
             );
 
+            uint8_t* asmdst = dst + (x + y * stride);   // ICL12.1 otherwise has problems with the asm-block (in debug-build on x86)
             __asm__ volatile (
                 "movq      %%mm6, %%mm2 \n\t"
                 "movq      %%mm6, %%mm1 \n\t"
@@ -488,7 +489,7 @@ static av_always_inline void gmc(uint8_t *dst, uint8_t *src,
                 "packuswb  %%mm0, %%mm0 \n\t"
                 "movd      %%mm0, %0    \n\t"
 
-                : "=m"(dst[x + y * stride])
+                : "=m"(asmdst/*dst[x + y * stride]*/)
                 : "m"(src[0]), "m"(src[1]),
                   "m"(src[stride]), "m"(src[stride + 1]),
                   "m"(*r4), "m"(shift2)

@@ -146,7 +146,12 @@ static int RENAME(dct_quantize)(MpegEncContext *s,
             SPREADW(MM"3")
             "pxor "MM"7, "MM"7                  \n\t" // 0
             "pxor "MM"4, "MM"4                  \n\t" // 0
-            MOVQ" (%2), "MM"5                   \n\t" // qmat[0]
+#if defined(__INTEL_COMPILER) && defined(_M_IX86) && defined(_DEBUG)
+            "mov %2, %%"REG_a"                  \n\t"
+            MOVQ" (%%"REG_a"), "MM"5            \n\t" // qmat[0]
+#else
+            "MOVQ    %2, "MM"5                  \n\t" // qmat[0]
+#endif
             "pxor "MM"6, "MM"6                  \n\t"
             "psubw (%3), "MM"6                  \n\t" // -bias[0]
             "mov $-128, %%"REG_a"               \n\t"
@@ -168,9 +173,15 @@ static int RENAME(dct_quantize)(MpegEncContext *s,
             " js 1b                             \n\t"
             PMAX(MM"3", MM"0")
             "movd "MM"3, %%"REG_a"              \n\t"
-            "movzb %%al, %%"REG_a"              \n\t" // last_non_zero_p1
+            "movzbl %%al, %%eax                 \n\t" // last_non_zero_p1
             : "+a" (last_non_zero_p1)
-            : "r" (block+64), "r" (qmat), "r" (bias),
+            : "r" (block+64), 
+#if defined(__INTEL_COMPILER) && defined(_M_IX86) && defined(_DEBUG)
+			  "m" (qmat)
+#else
+			  "m" (*qmat), 
+#endif
+			  "r" (bias),
               "r" (ff_inv_zigzag_direct16+64), "r" (temp_block+64)
               XMM_CLOBBERS_ONLY("%xmm0", "%xmm1", "%xmm2", "%xmm3",
                                 "%xmm4", "%xmm5", "%xmm6", "%xmm7")
@@ -194,7 +205,14 @@ static int RENAME(dct_quantize)(MpegEncContext *s,
             RESTORE_SIGN(MM"1", MM"0")                // out=((ABS(block[i])*qmat[0] - bias[0]*qmat[0])>>16)*sign(block[i])
             MOVQ" "MM"0, (%5, %%"REG_a")        \n\t"
             "pcmpeqw "MM"7, "MM"0               \n\t" // out==0 ? 0xFF : 0x00
+#if defined(__INTEL_COMPILER) && defined(_M_IX86) && defined(_DEBUG)
+            "movd %%esi,"MM"6                   \n\t" // need to save esi somewhere...
+            "mov %4, %%esi                      \n\t" // esi = %4 = ff_inv_zigzag_direct16+64
+            MOVQ" (%%esi, %%"REG_a"), "MM"1     \n\t"
+            "movd "MM"6,%%esi                   \n\t" // restore esi
+#else
             MOVQ" (%4, %%"REG_a"), "MM"1        \n\t"
+#endif
             MOVQ" "MM"7, (%1, %%"REG_a")        \n\t" // 0
             "pandn "MM"1, "MM"0                 \n\t"
             PMAXW(MM"0", MM"3")
@@ -202,10 +220,15 @@ static int RENAME(dct_quantize)(MpegEncContext *s,
             " js 1b                             \n\t"
             PMAX(MM"3", MM"0")
             "movd "MM"3, %%"REG_a"              \n\t"
-            "movzb %%al, %%"REG_a"              \n\t" // last_non_zero_p1
+			"movzbl %%al, %%eax                 \n\t" // last_non_zero_p1
             : "+a" (last_non_zero_p1)
             : "r" (block+64), "r" (qmat+64), "r" (bias+64),
-              "r" (ff_inv_zigzag_direct16+64), "r" (temp_block+64)
+#if defined(__INTEL_COMPILER) && defined(_M_IX86) && defined(_DEBUG)
+              "m" (ff_inv_zigzag_direct16+64),
+#else
+              "r" (ff_inv_zigzag_direct16+64), 
+#endif
+              "r" (temp_block+64)
               XMM_CLOBBERS_ONLY("%xmm0", "%xmm1", "%xmm2", "%xmm3",
                                 "%xmm4", "%xmm5", "%xmm6", "%xmm7")
         );

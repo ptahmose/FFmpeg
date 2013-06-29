@@ -34,7 +34,7 @@
 #include "libavcodec/cabac.h"
 #include "cabac.h"
 
-#if HAVE_INLINE_ASM
+#if HAVE_INLINE_ASM && !defined(__INTEL_COMPILER)
 
 //FIXME use some macros to avoid duplicating get_cabac (cannot be done yet
 //as that would make optimization work hard)

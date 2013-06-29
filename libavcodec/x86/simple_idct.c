@@ -337,12 +337,12 @@ COL_IDCT(  24(%1), 88(%1), 56(%1), 120(%1), 12(%0), 20)
 
 #else
 
-#define DC_COND_IDCT(src0, src4, src1, src5, dst, rounder, shift) \
+#define DC_COND_IDCT(src0, src4, src1, src5, dst, rounder, shift, _wm1010, _d40000) \
         "movq " #src0 ", %%mm0          \n\t" /* R4     R0      r4      r0 */\
         "movq " #src4 ", %%mm1          \n\t" /* R6     R2      r6      r2 */\
         "movq " #src1 ", %%mm2          \n\t" /* R3     R1      r3      r1 */\
         "movq " #src5 ", %%mm3          \n\t" /* R7     R5      r7      r5 */\
-        "movq "MANGLE(wm1010)", %%mm4   \n\t"\
+        "movq "#_wm1010", %%mm4         \n\t"\
         "pand %%mm0, %%mm4              \n\t"\
         "por %%mm1, %%mm4               \n\t"\
         "por %%mm2, %%mm4               \n\t"\
@@ -416,7 +416,7 @@ COL_IDCT(  24(%1), 88(%1), 56(%1), 120(%1), 12(%0), 20)
         "jmp 2f                         \n\t"\
         "1:                             \n\t"\
         "pslld $16, %%mm0               \n\t"\
-        "paddd "MANGLE(d40000)", %%mm0  \n\t"\
+        "paddd "#_d40000",%%mm0         \n\t"\
         "psrad $13, %%mm0               \n\t"\
         "packssdw %%mm0, %%mm0          \n\t"\
         "movq %%mm0, " #dst "           \n\t"\
@@ -570,7 +570,7 @@ COL_IDCT(  24(%1), 88(%1), 56(%1), 120(%1), 12(%0), 20)
         "movq %%mm4, 16+" #dst "        \n\t"\
 
 //IDCT(         src0,   src4,   src1,   src5,    dst,   rounder, shift)
-DC_COND_IDCT(  0(%0),  8(%0), 16(%0), 24(%0),  0(%1),paddd 8(%2), 11)
+DC_COND_IDCT(  0(%0),  8(%0), 16(%0), 24(%0),  0(%1),paddd 8(%2), 11, (%3), (%4))
 Z_COND_IDCT(  32(%0), 40(%0), 48(%0), 56(%0), 32(%1),paddd (%2), 11, 4f)
 Z_COND_IDCT(  64(%0), 72(%0), 80(%0), 88(%0), 64(%1),paddd (%2), 11, 2f)
 Z_COND_IDCT(  96(%0),104(%0),112(%0),120(%0), 96(%1),paddd (%2), 11, 1f)
@@ -1141,7 +1141,7 @@ Temp
 */
 
 "9: \n\t"
-                :: "r" (block), "r" (temp), "r" (coeffs)
+                :: "r" (block), "r" (temp), "r" (coeffs), "m"(wm1010), "m"(d40000)
                 : "%eax"
         );
 }

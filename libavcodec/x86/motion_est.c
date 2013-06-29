@@ -175,7 +175,7 @@ static inline void sad8_4_mmxext(uint8_t *blk1, uint8_t *blk2,
                                  int stride, int h)
 {
     __asm__ volatile(
-        "movq "MANGLE(bone)", %%mm5     \n\t"
+        "movq (%4), %%mm5               \n\t"	
         "movq (%1), %%mm0               \n\t"
         "pavgb 1(%1), %%mm0             \n\t"
         "add %3, %1                     \n\t"
@@ -198,7 +198,7 @@ static inline void sad8_4_mmxext(uint8_t *blk1, uint8_t *blk2,
         "sub $2, %0                     \n\t"
         " jg 1b                         \n\t"
         : "+r" (h), "+r" (blk1), "+r" (blk2)
-        : "r" ((x86_reg)stride)
+        : "r" ((x86_reg)stride), "m"(bone)
     );
 }
 
@@ -266,7 +266,7 @@ static inline void sad8_4_mmx(uint8_t *blk1, uint8_t *blk2, int stride, int h)
         "punpckhbw %%mm7, %%mm5         \n\t"
         "paddw %%mm4, %%mm2             \n\t"
         "paddw %%mm5, %%mm3             \n\t"
-        "movq 16+"MANGLE(round_tab)", %%mm5 \n\t"
+        "movq (%5), %%mm5               \n\t"
         "paddw %%mm2, %%mm0             \n\t"
         "paddw %%mm3, %%mm1             \n\t"
         "paddw %%mm5, %%mm0             \n\t"
@@ -289,7 +289,7 @@ static inline void sad8_4_mmx(uint8_t *blk1, uint8_t *blk2, int stride, int h)
         "add %4, %%"REG_a"              \n\t"
         " js 1b                         \n\t"
         : "+a" (len)
-        : "r" (blk1 - len), "r" (blk1 -len + stride), "r" (blk2 - len), "r" ((x86_reg)stride)
+        : "r" (blk1 - len), "r" (blk1 -len + stride), "r" (blk2 - len), "r" ((x86_reg)stride), "r"(round_tab+2)
     );
 }
 
