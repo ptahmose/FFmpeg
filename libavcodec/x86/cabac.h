@@ -218,7 +218,7 @@ static av_always_inline int get_cabac_bypass_sign_x86(CABACContext *c, int val)
         "shl             $17, %k1       \n\t"
         "add           %%eax, %%eax     \n\t"
         "sub             %k1, %%eax     \n\t"
-        "cltd                           \n\t"
+        "cdq                            \n\t"
         "and           %%edx, %k1       \n\t"
         "add             %k1, %%eax     \n\t"
         "xor           %%edx, %%ecx     \n\t"
