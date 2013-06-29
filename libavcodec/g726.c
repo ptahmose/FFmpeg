@@ -191,13 +191,13 @@ static inline int16_t inverse_quant(G726Context* c, int i)
     return (dql < 0) ? 0 : ((dqt<<dex) >> 7);
 }
 
-static int16_t g726_decode(G726Context* c, int I)
+static int16_t g726_decode(G726Context* c, int i)
 {
-    int dq, re_signal, pk0, fa1, i, tr, ylint, ylfrac, thr2, al, dq0;
+    int dq, re_signal, pk0, fa1, n, tr, ylint, ylfrac, thr2, al, dq0;
     Float11 f;
-    int I_sig= I >> (c->code_size - 1);
+    int I_sig= i >> (c->code_size - 1);
 
-    dq = inverse_quant(c, I);
+    dq = inverse_quant(c, i);
 
     /* Transition detect */
     ylint = (c->yl >> 15);
@@ -215,8 +215,8 @@ static int16_t g726_decode(G726Context* c, int I)
     if (tr) {
         c->a[0] = 0;
         c->a[1] = 0;
-        for (i=0; i<6; i++)
-            c->b[i] = 0;
+        for (n=0; n<6; n++)
+            c->b[n] = 0;
     } else {
         /* This is a bit crazy, but it really is +255 not +256 */
         fa1 = av_clip((-c->a[0]*c->pk[0]*pk0)>>5, -256, 255);
@@ -226,8 +226,8 @@ static int16_t g726_decode(G726Context* c, int I)
         c->a[0] += 64*3*pk0*c->pk[0] - (c->a[0] >> 8);
         c->a[0] = av_clip(c->a[0], -(15360 - c->a[1]), 15360 - c->a[1]);
 
-        for (i=0; i<6; i++)
-            c->b[i] += 128*dq0*sgn(-c->dq[i].sign) - (c->b[i]>>8);
+        for (n=0; n<6; n++)
+            c->b[n] += 128*dq0*sgn(-c->dq[n].sign) - (c->b[n]>>8);
     }
 
     /* Update Dq and Sr and Pk */
@@ -235,16 +235,16 @@ static int16_t g726_decode(G726Context* c, int I)
     c->pk[0] = pk0 ? pk0 : 1;
     c->sr[1] = c->sr[0];
     i2f(re_signal, &c->sr[0]);
-    for (i=5; i>0; i--)
-        c->dq[i] = c->dq[i-1];
+    for (n=5; n>0; n--)
+        c->dq[n] = c->dq[n-1];
     i2f(dq, &c->dq[0]);
     c->dq[0].sign = I_sig; /* Isn't it crazy ?!?! */
 
     c->td = c->a[1] < -11776;
 
     /* Update Ap */
-    c->dms += (c->tbls.F[I]<<4) + ((- c->dms) >> 5);
-    c->dml += (c->tbls.F[I]<<4) + ((- c->dml) >> 7);
+    c->dms += (c->tbls.F[i]<<4) + ((- c->dms) >> 5);
+    c->dml += (c->tbls.F[i]<<4) + ((- c->dml) >> 7);
     if (tr)
         c->ap = 256;
     else {
@@ -254,7 +254,7 @@ static int16_t g726_decode(G726Context* c, int I)
     }
 
     /* Update Yu and Yl */
-    c->yu = av_clip(c->y + c->tbls.W[I] + ((-c->y)>>5), 544, 5120);
+    c->yu = av_clip(c->y + c->tbls.W[i] + ((-c->y)>>5), 544, 5120);
     c->yl += c->yu + ((-c->yl)>>6);
 
     /* Next iteration for Y */
@@ -263,11 +263,11 @@ static int16_t g726_decode(G726Context* c, int I)
 
     /* Next iteration for SE and SEZ */
     c->se = 0;
-    for (i=0; i<6; i++)
-        c->se += mult(i2f(c->b[i] >> 2, &f), &c->dq[i]);
+    for (n=0; n<6; n++)
+        c->se += mult(i2f(c->b[n] >> 2, &f), &c->dq[n]);
     c->sez = c->se >> 1;
-    for (i=0; i<2; i++)
-        c->se += mult(i2f(c->a[i] >> 2, &f), &c->sr[i]);
+    for (n=0; n<2; n++)
+        c->se += mult(i2f(c->a[n] >> 2, &f), &c->sr[n]);
     c->se >>= 1;
 
     return av_clip(re_signal << 2, -0xffff, 0xffff);
