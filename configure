@@ -2659,6 +2659,14 @@ case "$toolchain" in
         target_os_default="win32"
         TMPDIR=.
     ;;
+    cygicl)
+        cc_default="iclwrap.sh icl"
+        ld_default="iclwrap.sh xilink"
+        nm_default="dumpbin -symbols"
+        ar_default="xilib"
+        target_os_default="win32"
+        add_cflags "-I${source_path}/compat/msvcrt"
+    ;;
     gcov)
         add_cflags  -fprofile-arcs -ftest-coverage
         add_ldflags -fprofile-arcs -ftest-coverage
@@ -2821,6 +2829,44 @@ icl_flags(){
             # on Windows, does enable remarks so disable them here.
             -Wall)                echo $flag -Qdiag-disable:remark ;;
             -std=c99)             echo -Qstd=c99 ;;
+        esac
+    done
+}
+
+cygicl_flags(){
+	for flag; do
+        case $flag in
+            -fomit-frame-pointer) ;;  # frame-pointer-omission is not a good idea I suppose
+            -g)                   echo -Z7 ;;
+            -Wall)                echo -W4 -wd144,167,188,556,1292,1419,10006,10148,10156 \
+                                        -Qdiag-disable:remark ;;
+            -std=c99)             echo -Qstd=c99 ;;
+            -fno-math-errno)      ;;
+            -fno-common)          ;;
+            -fno-signed-zeros)    ;;
+            -Wwrite-strings)      ;;
+            -Wtype-limits)        ;;
+            -Wundef)              ;;
+            -Wmissing-prototypes) ;;
+            -Wdeclaration-after-statement) ;;
+            -Wno-pointer-to-int-cast) ;;
+            -Wstrict-prototypes)      ;;
+            -Wno-format-zero-length)  ;;
+            -Wredundant-decls)        ;;
+            -Wno-switch)              ;;
+            -Wno-parentheses)         ;;
+            -Wdisabled-optimization)  ;;
+            -Wpointer-arith)      ;;
+            -Wno-pointer-sign)    ;;
+            -fPIC)                ;;
+            -lz)                  echo zlib.lib ;;
+            -lavifil32)           echo vfw32.lib ;;
+            -lavicap32)           echo vfw32.lib user32.lib ;;
+            -l*)                  echo ${flag#-l}.lib ;;
+            -Wl,--as-needed)      ;;
+            -Wl,--warn-common)    ;;
+            -Wl,-rpath-link=*)    ;;
+            *)                    echo $flag ;;
         esac
     done
 }
@@ -3038,6 +3084,23 @@ probe_cc(){
             append _cflags -Dsnprintf=_snprintf
         fi
         disable stripping
+elif ($_cc 2>&1 | grep -q "Intel Corporation") && (uname -o 2>&1 | grep -q -i cygwin); then
+        _type=cygicl
+        _ident=$($cc 2>&1 | head -n1)
+        _DEPCMD='$(DEP$(1)) $(DEP$(1)FLAGS) $($(1)DEP_FLAGS) $<  | awk '\''{sub(/.obj/,".o",$$1);printf $$1;printf " ";system("cygpath -u \""$$2"\"")}'\'' > $(@:.o=.d)'
+        _DEPFLAGS='$(CPPFLAGS) $(CFLAGS) -QMM'
+        _cflags_speed="-O2"
+        _cflags_size="-O1"
+        # Nonstandard output options, to avoid cygwin path conversion issues, relies on wrapper to remap it
+        _ld_o='-out:$@'
+        _cc_o='-Fo:$@'
+        _cc_e='-P -Fi $@'
+        _flags_filter=cygicl_flags
+        _ld_lib='lib%.a'
+        _ld_path='-libpath:'
+        _flags='-nologo'
+        _cflags='-Qms0 -Qvec- -Qsimd- -GS -D_USE_MATH_DEFINES -Dinline=__inline  -FImathimf.h -FIstdlib.h -FIcompat/msvcrt/snprintf.h -FIcompat/strtod.h -Dstrtoll=_strtoi64 '
+        disable stripping
     elif $_cc 2>&1 | grep -q Intel; then
         _type=icl
         _ident=$($cc 2>&1 | head -n1)
@@ -3148,6 +3211,9 @@ elif $ar 2>&1 | grep -q 'Texas Instruments'; then
 elif $ar 2>&1 | grep -q 'Usage: ar.*-X.*any'; then
     arflags='-Xany -r -c'
     ar_o='$@'
+elif ($ar 2>&1 | grep -q "Intel Corporation") && (uname -o 2>&1 | grep -q -i cygwin); then	
+    arflags="-nologo"
+    ar_o='-out:$@'	
 else
     arflags="rc"
     ar_o='$@'
@@ -3768,10 +3834,19 @@ elif check_header _mingw.h; then
     fi
 elif check_func_headers stdlib.h _get_doserrno; then
     libc_type=msvcrt
+    case "$toolchain" in
+        cygicl)
+            add_compat strtod.o
+            add_compat msvcrt/snprintf.o
+            add_compat msvcrt/fakestubs.o
+            ;;
+        ?*)
     add_compat strtod.o strtod=avpriv_strtod
     add_compat msvcrt/snprintf.o snprintf=avpriv_snprintf   \
                                  _snprintf=avpriv_snprintf  \
                                  vsnprintf=avpriv_vsnprintf
+            ;;
+        esac
     # The MSVC 2010 headers (Win 7.0 SDK) set _WIN32_WINNT to
     # 0x601 by default unless something else is set by the user.
     # This can easily lead to us detecting functions only present
@@ -4040,8 +4115,17 @@ EOF
 
     if ! disabled_any asm mmx yasm; then
         if check_cmd $yasmexe --version; then
+        case "$toolchain" in
+            cygicl)
+                enabled x86_32 && yasm_extra="--arch=x86 -DPREFIX -DARCH_X86_32=1 -DARCH_X86_64=0 "
+                enabled x86_64 && yasm_extra="--arch=x86 -m amd64 -DARCH_X86_32=0 -DARCH_X86_64=1 " && objformat=win64
+                yasm_debug="--dformat=cv8"
+                ;;
+            ?*)
             enabled x86_64 && yasm_extra="-m amd64"
             yasm_debug="-g dwarf2"
+            ;;
+        esac
         elif check_cmd nasm -v; then
             yasmexe=nasm
             yasm_debug="-g -F dwarf"
@@ -4053,6 +4137,7 @@ EOF
         test -n "$extern_prefix"  && append YASMFLAGS "-DPREFIX"
         case "$objformat" in
             elf*) enabled debug && append YASMFLAGS $yasm_debug ;;
+            win32|win64) enabled debug && append YASMFLAGS $yasm_debug ;;
         esac
 
         check_yasm "movbe ecx, [5]" && enable yasm ||
@@ -4614,6 +4699,8 @@ elif enabled_any msvc icl; then
         disabled inline_asm || warn "inline asm disabled due to issues with it in ICL"
         disable inline_asm
     fi
+elif enabled cygicl; then
+    disable ebp_available
 fi
 
 case $target_os in
