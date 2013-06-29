@@ -104,7 +104,7 @@ typedef struct {
 
 typedef struct {
     float level;
-    QDM2Complex *complex;
+    QDM2Complex *qdm2complex;
     const float *table;
     int   phase;
     int   phase_shift;
@@ -122,7 +122,7 @@ typedef struct {
 } FFTCoefficient;
 
 typedef struct {
-    DECLARE_ALIGNED(32, QDM2Complex, complex)[MPA_MAX_CHANNELS][256];
+    DECLARE_ALIGNED(32, QDM2Complex, qdm2complex)[MPA_MAX_CHANNELS][256];
 } QDM2FFT;
 
 /**
@@ -1591,10 +1591,10 @@ static void qdm2_fft_generate_tone(QDM2Context *q, FFTTone *tone)
 
     /* generate FFT coefficients for tone */
     if (tone->duration >= 3 || tone->cutoff >= 3) {
-        tone->complex[0].im += c.im;
-        tone->complex[0].re += c.re;
-        tone->complex[1].im -= c.im;
-        tone->complex[1].re -= c.re;
+        tone->qdm2complex[0].im += c.im;
+        tone->qdm2complex[0].re += c.re;
+        tone->qdm2complex[1].im -= c.im;
+        tone->qdm2complex[1].re -= c.re;
     } else {
         f[1] = -tone->table[4];
         f[0] = tone->table[3] - tone->table[0];
@@ -1603,14 +1603,14 @@ static void qdm2_fft_generate_tone(QDM2Context *q, FFTTone *tone)
         f[4] = tone->table[0] - tone->table[1];
         f[5] = tone->table[2];
         for (i = 0; i < 2; i++) {
-            tone->complex[fft_cutoff_index_table[tone->cutoff][i]].re +=
+            tone->qdm2complex[fft_cutoff_index_table[tone->cutoff][i]].re +=
                 c.re * f[i];
-            tone->complex[fft_cutoff_index_table[tone->cutoff][i]].im +=
+            tone->qdm2complex[fft_cutoff_index_table[tone->cutoff][i]].im +=
                 c.im * ((tone->cutoff <= i) ? -f[i] : f[i]);
         }
         for (i = 0; i < 4; i++) {
-            tone->complex[i].re += c.re * f[i + 2];
-            tone->complex[i].im += c.im * f[i + 2];
+            tone->qdm2complex[i].re += c.re * f[i + 2];
+            tone->qdm2complex[i].im += c.im * f[i + 2];
         }
     }
 
@@ -1627,7 +1627,7 @@ static void qdm2_fft_tone_synthesizer(QDM2Context *q, int sub_packet)
     const double iscale = 0.25 * M_PI;
 
     for (ch = 0; ch < q->channels; ch++) {
-        memset(q->fft.complex[ch], 0, q->fft_size * sizeof(QDM2Complex));
+        memset(q->fft.qdm2complex[ch], 0, q->fft_size * sizeof(QDM2Complex));
     }
 
 
@@ -1645,10 +1645,10 @@ static void qdm2_fft_tone_synthesizer(QDM2Context *q, int sub_packet)
 
             c.re = level * cos(q->fft_coefs[i].phase * iscale);
             c.im = level * sin(q->fft_coefs[i].phase * iscale);
-            q->fft.complex[ch][q->fft_coefs[i].offset + 0].re += c.re;
-            q->fft.complex[ch][q->fft_coefs[i].offset + 0].im += c.im;
-            q->fft.complex[ch][q->fft_coefs[i].offset + 1].re -= c.re;
-            q->fft.complex[ch][q->fft_coefs[i].offset + 1].im -= c.im;
+            q->fft.qdm2complex[ch][q->fft_coefs[i].offset + 0].re += c.re;
+            q->fft.qdm2complex[ch][q->fft_coefs[i].offset + 0].im += c.im;
+            q->fft.qdm2complex[ch][q->fft_coefs[i].offset + 1].re -= c.re;
+            q->fft.qdm2complex[ch][q->fft_coefs[i].offset + 1].im -= c.im;
         }
 
     /* generate existing FFT tones */
@@ -1678,7 +1678,7 @@ static void qdm2_fft_tone_synthesizer(QDM2Context *q, int sub_packet)
                         tone.cutoff = (offset >= 60) ? 3 : 2;
 
                     tone.level = (q->fft_coefs[j].exp < 0) ? 0.0 : fft_tone_level_table[q->superblocktype_2_3 ? 0 : 1][q->fft_coefs[j].exp & 63];
-                    tone.complex = &q->fft.complex[ch][offset];
+                    tone.qdm2complex = &q->fft.qdm2complex[ch][offset];
                     tone.table = fft_tone_sample_table[i][q->fft_coefs[j].offset - (offset << four_i)];
                     tone.phase = 64 * q->fft_coefs[j].phase - (offset << 8) - 128;
                     tone.phase_shift = (2 * q->fft_coefs[j].offset + 1) << (7 - four_i);
@@ -1697,13 +1697,13 @@ static void qdm2_calculate_fft(QDM2Context *q, int channel, int sub_packet)
     const float gain = (q->channels == 1 && q->nb_channels == 2) ? 0.5f : 1.0f;
     float *out       = q->output_buffer + channel;
     int i;
-    q->fft.complex[channel][0].re *= 2.0f;
-    q->fft.complex[channel][0].im  = 0.0f;
-    q->rdft_ctx.rdft_calc(&q->rdft_ctx, (FFTSample *)q->fft.complex[channel]);
+    q->fft.qdm2complex[channel][0].re *= 2.0f;
+    q->fft.qdm2complex[channel][0].im  = 0.0f;
+    q->rdft_ctx.rdft_calc(&q->rdft_ctx, (FFTSample *)q->fft.qdm2complex[channel]);
     /* add samples to output buffer */
     for (i = 0; i < FFALIGN(q->fft_size, 8); i++) {
-        out[0]           += q->fft.complex[channel][i].re * gain;
-        out[q->channels] += q->fft.complex[channel][i].im * gain;
+        out[0]           += q->fft.qdm2complex[channel][i].re * gain;
+        out[q->channels] += q->fft.qdm2complex[channel][i].im * gain;
         out              += 2 * q->channels;
     }
 }
