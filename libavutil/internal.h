@@ -135,7 +135,7 @@
 
 #include "libm.h"
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
 #pragma comment(linker, "/include:"EXTERN_PREFIX"avpriv_strtod")
 #pragma comment(linker, "/include:"EXTERN_PREFIX"avpriv_snprintf")
 #endif

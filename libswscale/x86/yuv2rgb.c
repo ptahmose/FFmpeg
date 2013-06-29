@@ -57,14 +57,14 @@ DECLARE_ASM_CONST(8, uint64_t, pb_07) = 0x0707070707070707ULL;
 #include "yuv2rgb_template.c"
 #endif /* HAVE_MMX_INLINE */
 
-// MMXEXT versions
-#if HAVE_MMXEXT_INLINE
+//MMX versions
+#if HAVE_MMX_INLINE
 #undef RENAME
 #undef COMPILE_TEMPLATE_MMXEXT
-#define COMPILE_TEMPLATE_MMXEXT 1
-#define RENAME(a) a ## _mmxext
+#define COMPILE_TEMPLATE_MMXEXT 0
+#define RENAME(a) a ## _MMX
 #include "yuv2rgb_template.c"
-#endif /* HAVE_MMXEXT_INLINE */
+#endif /* HAVE_MMX_INLINE */
 
 #endif /* HAVE_INLINE_ASM */
 

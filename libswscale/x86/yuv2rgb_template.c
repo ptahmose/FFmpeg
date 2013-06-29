@@ -81,7 +81,7 @@
     "movq      %%mm6, %%mm7\n\t"                 \
     "punpcklbw %%mm4, %%mm0\n\t"                 \
     "punpcklbw %%mm4, %%mm1\n\t"                 \
-    "pand     "MANGLE(mmx_00ffw)", %%mm6\n\t"    \
+    "pand       (%6), %%mm6\n\t" /*mmx_00ffw*/   \
     "psrlw     $8,    %%mm7\n\t"                 \
     "psllw     $3,    %%mm0\n\t"                 \
     "psllw     $3,    %%mm1\n\t"                 \
@@ -137,7 +137,10 @@
 #define YUV2RGB_OPERANDS                                          \
         : "+r" (index), "+r" (image)                              \
         : "r" (pu - index), "r" (pv - index), "r"(&c->redDither), \
-          "r" (py - 2*index)                                      \
+          "r" (py - 2*index), "m"(mmx_00ffw), "m"(mmx_redmask),   \
+          "m"(pb_e0), "m"(pb_03), "m"(pb_07),                     \
+          "m"(mask1101), "m"(mask0110), "m"(mask0100),            \
+          "m"(mask0010), "m"(mask1001)                            \
         : "memory"                                                \
         );                                                        \
     }                                                             \
@@ -159,15 +162,15 @@
 #define IF1(x) x
 
 #define RGB_PACK16(gmask, is15)                  \
-    "pand      "MANGLE(mmx_redmask)", %%mm0\n\t" \
-    "pand      "MANGLE(mmx_redmask)", %%mm1\n\t" \
+    "pand       (%7),     %%mm0\n\t"             \
+    "pand       (%7),     %%mm1\n\t"             \
     "movq      %%mm2,     %%mm3\n\t"             \
     "psllw   $"AV_STRINGIFY(3-is15)", %%mm2\n\t" \
     "psrlw   $"AV_STRINGIFY(5+is15)", %%mm3\n\t" \
     "psrlw     $3,        %%mm0\n\t"             \
     IF##is15("psrlw  $1,  %%mm1\n\t")            \
-    "pand "MANGLE(pb_e0)", %%mm2\n\t"            \
-    "pand "MANGLE(gmask)", %%mm3\n\t"            \
+    "pand       (%8),     %%mm2\n\t"             \
+    "pand   "#gmask",     %%mm3\n\t"             \
     "por       %%mm2,     %%mm0\n\t"             \
     "por       %%mm3,     %%mm1\n\t"             \
     "movq      %%mm0,     %%mm2\n\t"             \
@@ -203,7 +206,7 @@ static inline int RENAME(yuv420_rgb15)(SwsContext *c, const uint8_t *src[],
 #ifdef DITHER1XBPP
         DITHER_RGB
 #endif
-        RGB_PACK16(pb_03, 1)
+        RGB_PACK16( (%9)/*pb_03*/, 1)
 
     YUV2RGB_ENDLOOP(2)
     YUV2RGB_OPERANDS
@@ -231,7 +234,7 @@ static inline int RENAME(yuv420_rgb16)(SwsContext *c, const uint8_t *src[],
 #ifdef DITHER1XBPP
         DITHER_RGB
 #endif
-        RGB_PACK16(pb_07, 0)
+        RGB_PACK16((%10)/*pb_07*/, 0)
 
     YUV2RGB_ENDLOOP(2)
     YUV2RGB_OPERANDS
@@ -265,15 +268,15 @@ DECLARE_ASM_CONST(8, int16_t, mask0100[4]) = { 0,-1, 0, 0};
     "pshufw    $0xc6,  %%mm2, %%mm1 \n"\
     "pshufw    $0x84,  %%mm3, %%mm6 \n"\
     "pshufw    $0x38,  %%mm5, %%mm7 \n"\
-    "pand "MANGLE(mask1101)", %%mm6 \n" /* R0 G0 B0 R1 -- -- R2 G2 */\
+    "pand %11, %%mm6 \n" /*mask1101*/   /* R0 G0 B0 R1 -- -- R2 G2 */\
     "movq      %%mm1,         %%mm0 \n"\
-    "pand "MANGLE(mask0110)", %%mm7 \n" /* -- -- R6 G6 B6 R7 -- -- */\
+    "pand %12, %%mm7 \n" /*mask0110*/   /* -- -- R6 G6 B6 R7 -- -- */\
     "movq      %%mm1,         %%mm2 \n"\
-    "pand "MANGLE(mask0100)", %%mm1 \n" /* -- -- G3 B3 -- -- -- -- */\
+    "pand %13, %%mm1 \n" /*mask0100*/   /* -- -- G3 B3 -- -- -- -- */\
     "psrlq       $48,         %%mm3 \n" /* B2 R3 -- -- -- -- -- -- */\
-    "pand "MANGLE(mask0010)", %%mm0 \n" /* -- -- -- -- G1 B1 -- -- */\
+    "pand %14, %%mm0 \n" /*mask0010*/   /* -- -- -- -- G1 B1 -- -- */\
     "psllq       $32,         %%mm5 \n" /* -- -- -- -- R4 G4 B4 R5 */\
-    "pand "MANGLE(mask1001)", %%mm2 \n" /* G5 B5 -- -- -- -- G7 B7 */\
+    "pand %15, %%mm2 \n" /*mask1001*/   /* G5 B5 -- -- -- -- G7 B7 */\
     "por       %%mm3,         %%mm1 \n"\
     "por       %%mm6,         %%mm0 \n"\
     "por       %%mm5,         %%mm1 \n"\

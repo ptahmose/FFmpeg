@@ -440,7 +440,7 @@ static inline void RENAME(vertX1Filter)(uint8_t *src, int stride, PPContext *co)
         "paddusb %%mm0, %%mm0                   \n\t"
         "psubusb %%mm0, %%mm4                   \n\t"
         "pcmpeqb %%mm7, %%mm4                   \n\t" // d <= QP ? -1 : 0
-        "psubusb "MANGLE(b01)", %%mm3           \n\t"
+        "psubusb %3"/*MANGLE(b01)*/", %%mm3     \n\t"
         "pand %%mm4, %%mm3                      \n\t" // d <= QP ? d : 0
 
         PAVGB(%%mm7, %%mm3)                           // d/2
@@ -489,7 +489,7 @@ static inline void RENAME(vertX1Filter)(uint8_t *src, int stride, PPContext *co)
         "movq %%mm0, (%%"REG_c", %1, 2)         \n\t" // line 7
 
         :
-        : "r" (src), "r" ((x86_reg)stride), "m" (co->pQPb)
+        : "r" (src), "r" ((x86_reg)stride), "m" (co->pQPb), "m"(b01)
         : "%"REG_a, "%"REG_c
     );
 #else //TEMPLATE_PP_MMXEXT || TEMPLATE_PP_3DNOW
@@ -674,7 +674,7 @@ static inline void RENAME(doVertDefFilter)(uint8_t src[], int stride, PPContext 
         "movq (%%"REG_a", %1), %%mm3            \n\t" // l2
         "pxor %%mm6, %%mm2                      \n\t" // -l5-1
         "movq %%mm2, %%mm5                      \n\t" // -l5-1
-        "movq "MANGLE(b80)", %%mm4              \n\t" // 128
+        "movq %3"/*MANGLE(b80)*/", %%mm4        \n\t" // 128
         "lea (%%"REG_a", %1, 4), %%"REG_c"      \n\t"
         PAVGB(%%mm3, %%mm2)                           // (l2-l5+256)/2
         PAVGB(%%mm0, %%mm4)                           // ~(l4-l3)/4 + 128
@@ -686,7 +686,7 @@ static inline void RENAME(doVertDefFilter)(uint8_t src[], int stride, PPContext 
         "pxor %%mm6, %%mm2                      \n\t" // -l1-1
         PAVGB(%%mm3, %%mm2)                           // (l2-l1+256)/2
         PAVGB((%0), %%mm1)                            // (l0-l3+256)/2
-        "movq "MANGLE(b80)", %%mm3              \n\t" // 128
+        "movq %3"/*MANGLE(b80)*/", %%mm3        \n\t" // 128
         PAVGB(%%mm2, %%mm3)                           // ~(l2-l1)/4 + 128
         PAVGB(%%mm1, %%mm3)                           // ~(l0-l3)/4 +(l2-l1)/8 + 128
         PAVGB(%%mm2, %%mm3)                           // ~(l0-l3)/8 +5(l2-l1)/16 + 128
@@ -696,14 +696,14 @@ static inline void RENAME(doVertDefFilter)(uint8_t src[], int stride, PPContext 
         "movq (%%"REG_c", %1, 2), %%mm1         \n\t" // l7
         "pxor %%mm6, %%mm1                      \n\t" // -l7-1
         PAVGB((%0, %1, 4), %%mm1)                     // (l4-l7+256)/2
-        "movq "MANGLE(b80)", %%mm2              \n\t" // 128
+        "movq %3"/*MANGLE(b80)*/", %%mm2        \n\t" // 128
         PAVGB(%%mm5, %%mm2)                           // ~(l6-l5)/4 + 128
         PAVGB(%%mm1, %%mm2)                           // ~(l4-l7)/4 +(l6-l5)/8 + 128
         PAVGB(%%mm5, %%mm2)                           // ~(l4-l7)/8 +5(l6-l5)/16 + 128
 // mm0=128-q, mm2=renergy/16 + 128, mm3=lenergy/16 + 128, mm4= menergy/16 + 128
 
-        "movq "MANGLE(b00)", %%mm1              \n\t" // 0
-        "movq "MANGLE(b00)", %%mm5              \n\t" // 0
+        "movq %4"/*MANGLE(b00)*/", %%mm1        \n\t" // 0
+        "movq %4"/*MANGLE(b00)*/", %%mm5        \n\t" // 0
         "psubb %%mm2, %%mm1                     \n\t" // 128 - renergy/16
         "psubb %%mm3, %%mm5                     \n\t" // 128 - lenergy/16
         PMAXUB(%%mm1, %%mm2)                          // 128 + |renergy/16|
@@ -712,7 +712,7 @@ static inline void RENAME(doVertDefFilter)(uint8_t src[], int stride, PPContext 
 
 // mm0=128-q, mm3=128 + MIN(|lenergy|,|renergy|)/16, mm4= menergy/16 + 128
 
-        "movq "MANGLE(b00)", %%mm7              \n\t" // 0
+        "movq %4"/*MANGLE(b00)*/", %%mm7        \n\t" // 0
         "movq %2, %%mm2                         \n\t" // QP
         PAVGB(%%mm6, %%mm2)                           // 128 + QP/2
         "psubb %%mm6, %%mm2                     \n\t"
@@ -726,13 +726,13 @@ static inline void RENAME(doVertDefFilter)(uint8_t src[], int stride, PPContext 
 // mm0=128-q, mm1= SIGN(menergy), mm2= |menergy|/16 < QP/2, mm4= d/16
 
         "movq %%mm4, %%mm3                      \n\t" // d
-        "psubusb "MANGLE(b01)", %%mm4           \n\t"
+        "psubusb %5"/*MANGLE(b01)*/", %%mm4     \n\t"
         PAVGB(%%mm7, %%mm4)                           // d/32
         PAVGB(%%mm7, %%mm4)                           // (d + 32)/64
         "paddb %%mm3, %%mm4                     \n\t" // 5d/64
         "pand %%mm2, %%mm4                      \n\t"
 
-        "movq "MANGLE(b80)", %%mm5              \n\t" // 128
+        "movq %3"/*MANGLE(b80)*/", %%mm5        \n\t" // 128
         "psubb %%mm0, %%mm5                     \n\t" // q
         "paddsb %%mm6, %%mm5                    \n\t" // fix bad rounding
         "pcmpgtb %%mm5, %%mm7                   \n\t" // SIGN(q)
@@ -754,7 +754,7 @@ static inline void RENAME(doVertDefFilter)(uint8_t src[], int stride, PPContext 
         "movq %%mm2, (%0, %1, 4)                \n\t"
 
         :
-        : "r" (src), "r" ((x86_reg)stride), "m" (c->pQPb)
+        : "r" (src), "r" ((x86_reg)stride), "m" (c->pQPb), "m"(b80), "m"(b00), "m"(b01)
         : "%"REG_a, "%"REG_c
     );
 
@@ -988,10 +988,10 @@ static inline void RENAME(doVertDefFilter)(uint8_t src[], int stride, PPContext 
         "psubusw %%mm1, %%mm5                   \n\t" // ld
 
 
-        "movq "MANGLE(w05)", %%mm2              \n\t" // 5
+        "movq %4"/*MANGLE(w05)*/", %%mm2        \n\t" // 5
         "pmullw %%mm2, %%mm4                    \n\t"
         "pmullw %%mm2, %%mm5                    \n\t"
-        "movq "MANGLE(w20)", %%mm2              \n\t" // 32
+        "movq %5"/*MANGLE(w20)*/", %%mm2        \n\t" // 32
         "paddw %%mm2, %%mm4                     \n\t"
         "paddw %%mm2, %%mm5                     \n\t"
         "psrlw $6, %%mm4                        \n\t"
@@ -1041,7 +1041,7 @@ static inline void RENAME(doVertDefFilter)(uint8_t src[], int stride, PPContext 
         "movq %%mm0, (%0, %1)                   \n\t"
 
         : "+r" (src)
-        : "r" ((x86_reg)stride), "m" (c->pQPb), "r"(tmp)
+        : "r" ((x86_reg)stride), "m" (c->pQPb), "r"(tmp), "m"(w05), "m"(w20)
         : "%"REG_a
     );
 #else //TEMPLATE_PP_MMXEXT || TEMPLATE_PP_3DNOW
@@ -1181,10 +1181,18 @@ FIND_MIN_MAX((%0, %1, 8))
 #endif
         "movq %%mm6, %%mm0                      \n\t" // max
         "psubb %%mm7, %%mm6                     \n\t" // max - min
+#if defined(__INTEL_COMPILER) && defined(_DEBUG)
+		"mov %4,%%r15\n\t"
+#else
         "push %4                              \n\t"
+#endif
         "movd %%mm6, %k4                        \n\t"
-        "cmpb "MANGLE(deringThreshold)", %b4    \n\t"
+        "cmpb %5"/*MANGLE(deringThreshold)*/", %b4\n\t"
+#if defined(__INTEL_COMPILER) && defined(_DEBUG)
+		"mov %%r15,%4\n\t"
+#else
         "pop %4                               \n\t"
+#endif
         " jb 1f                                 \n\t"
         PAVGB(%%mm0, %%mm7)                           // a=(max + min)/2
         "punpcklbw %%mm7, %%mm7                 \n\t"
@@ -1209,9 +1217,9 @@ FIND_MIN_MAX((%0, %1, 8))
         "psubusb %%mm7, %%mm0                   \n\t"
         "psubusb %%mm7, %%mm2                   \n\t"
         "psubusb %%mm7, %%mm3                   \n\t"
-        "pcmpeqb "MANGLE(b00)", %%mm0           \n\t" // L10 > a ? 0 : -1
-        "pcmpeqb "MANGLE(b00)", %%mm2           \n\t" // L20 > a ? 0 : -1
-        "pcmpeqb "MANGLE(b00)", %%mm3           \n\t" // L00 > a ? 0 : -1
+        "pcmpeqb %6"/*MANGLE(b00)*/", %%mm0     \n\t" // L10 > a ? 0 : -1
+        "pcmpeqb %6"/*MANGLE(b00)*/", %%mm2     \n\t" // L20 > a ? 0 : -1
+        "pcmpeqb %6"/*MANGLE(b00)*/", %%mm3     \n\t" // L00 > a ? 0 : -1
         "paddb %%mm2, %%mm0                     \n\t"
         "paddb %%mm3, %%mm0                     \n\t"
 
@@ -1232,9 +1240,9 @@ FIND_MIN_MAX((%0, %1, 8))
         "psubusb %%mm7, %%mm2                   \n\t"
         "psubusb %%mm7, %%mm4                   \n\t"
         "psubusb %%mm7, %%mm5                   \n\t"
-        "pcmpeqb "MANGLE(b00)", %%mm2           \n\t" // L11 > a ? 0 : -1
-        "pcmpeqb "MANGLE(b00)", %%mm4           \n\t" // L21 > a ? 0 : -1
-        "pcmpeqb "MANGLE(b00)", %%mm5           \n\t" // L01 > a ? 0 : -1
+        "pcmpeqb %6"/*MANGLE(b00)*/", %%mm2           \n\t" // L11 > a ? 0 : -1
+        "pcmpeqb %6"/*MANGLE(b00)*/", %%mm4           \n\t" // L21 > a ? 0 : -1
+        "pcmpeqb %6"/*MANGLE(b00)*/", %%mm5           \n\t" // L01 > a ? 0 : -1
         "paddb %%mm4, %%mm2                     \n\t"
         "paddb %%mm5, %%mm2                     \n\t"
 // 0, 2, 3, 1
@@ -1259,7 +1267,7 @@ FIND_MIN_MAX((%0, %1, 8))
         "psubusb " #lx ", " #t1 "               \n\t"\
         "psubusb " #lx ", " #t0 "               \n\t"\
         "psubusb " #lx ", " #sx "               \n\t"\
-        "movq "MANGLE(b00)", " #lx "            \n\t"\
+        "movq %6"/*MANGLE(b00)*/", " #lx "      \n\t"\
         "pcmpeqb " #lx ", " #t1 "               \n\t" /* src[-1] > a ? 0 : -1*/\
         "pcmpeqb " #lx ", " #t0 "               \n\t" /* src[+1] > a ? 0 : -1*/\
         "pcmpeqb " #lx ", " #sx "               \n\t" /* src[0]  > a ? 0 : -1*/\
@@ -1275,8 +1283,8 @@ FIND_MIN_MAX((%0, %1, 8))
         PMINUB(t1, pplx, t0)\
         "paddb " #sx ", " #ppsx "               \n\t"\
         "paddb " #psx ", " #ppsx "              \n\t"\
-        "#paddb "MANGLE(b02)", " #ppsx "        \n\t"\
-        "pand "MANGLE(b08)", " #ppsx "          \n\t"\
+        "#paddb %7"/*MANGLE(b02)*/", " #ppsx "  \n\t"\
+        "pand %8"/*MANGLE(b08)*/", " #ppsx "    \n\t"\
         "pcmpeqb " #lx ", " #ppsx "             \n\t"\
         "pand " #ppsx ", " #pplx "              \n\t"\
         "pandn " #dst ", " #ppsx "              \n\t"\
@@ -1312,8 +1320,14 @@ DERING_CORE((%%REGd, %1, 2),(%0, %1, 8)    ,%%mm0,%%mm2,%%mm4,%%mm1,%%mm3,%%mm5,
 DERING_CORE((%0, %1, 8)    ,(%%REGd, %1, 4),%%mm2,%%mm4,%%mm0,%%mm3,%%mm5,%%mm1,%%mm6,%%mm7)
 
         "1:                        \n\t"
-        : : "r" (src), "r" ((x86_reg)stride), "m" (c->pQPb), "m"(c->pQPb2), "q"(tmp)
-        : "%"REG_a, "%"REG_d, "%"REG_SP
+        : : "r" (src), "r" ((x86_reg)stride), "m" (c->pQPb), "m"(c->pQPb2), "q"(tmp), "m"(deringThreshold), "m"(b00), "m"(b02), "m"(b08)
+        : "%"REG_a, "%"REG_d
+#if defined(__INTEL_COMPILER) && defined(_DEBUG)
+		  , "%r15"
+#endif
+#if !defined(__INTEL_COMPILER)
+          , "%"REG_SP
+#endif
     );
 #else // HAVE_7REGS && (TEMPLATE_PP_MMXEXT || TEMPLATE_PP_3DNOW)
     int y;
@@ -2196,7 +2210,7 @@ static inline void RENAME(tempNoiseReducer)(uint8_t *src, int stride,
 #else //L1_DIFF
 #if defined (FAST_L2_DIFF)
         "pcmpeqb %%mm7, %%mm7                   \n\t"
-        "movq "MANGLE(b80)", %%mm6              \n\t"
+        "movq %4"/*MANGLE(b80)*/", %%mm6        \n\t"
         "pxor %%mm0, %%mm0                      \n\t"
 #define REAL_L2_DIFF_CORE(a, b)\
         "movq " #a ", %%mm5                     \n\t"\
@@ -2445,7 +2459,7 @@ L2_DIFF_CORE((%0, %%REGc)  , (%1, %%REGc))
 
         "4:                                     \n\t"
 
-        :: "r" (src), "r" (tempBlurred), "r"((x86_reg)stride), "m" (tempBlurredPast)
+        :: "r" (src), "r" (tempBlurred), "r"((x86_reg)stride), "m" (tempBlurredPast), "m"(b80)
         : "%"REG_a, "%"REG_d, "%"REG_c, "memory"
     );
 #else //TEMPLATE_PP_MMXEXT || TEMPLATE_PP_3DNOW
@@ -2699,8 +2713,8 @@ static av_always_inline void RENAME(do_a_deblock)(uint8_t *src, int step, int st
             "movq %%mm6, %%mm1                      \n\t"
             "psllw $2, %%mm0                        \n\t"
             "psllw $2, %%mm1                        \n\t"
-            "paddw "MANGLE(w04)", %%mm0             \n\t"
-            "paddw "MANGLE(w04)", %%mm1             \n\t"
+            "paddw %5"/*MANGLE(w04)*/", %%mm0       \n\t"
+            "paddw %5"/*MANGLE(w04)*/", %%mm1       \n\t"
 
 #define NEXT\
             "movq (%0), %%mm2                       \n\t"\
@@ -2789,7 +2803,7 @@ static av_always_inline void RENAME(do_a_deblock)(uint8_t *src, int step, int st
             "mov %4, %0                             \n\t" //FIXME
 
             : "+&r"(src)
-            : "r" ((x86_reg)step), "m" (c->pQPb), "r"(sums), "g"(src)
+            : "r" ((x86_reg)step), "m" (c->pQPb), "r"(sums), "g"(src), "m"(w04)
         );
 
         src+= step; // src points to begin of the 8x8 Block
@@ -3005,10 +3019,10 @@ static av_always_inline void RENAME(do_a_deblock)(uint8_t *src, int step, int st
             "psubusw %%mm1, %%mm5                   \n\t" // ld
 
 
-            "movq "MANGLE(w05)", %%mm2              \n\t" // 5
+            "movq (%5)"/*MANGLE(w05)*/", %%mm2      \n\t" // w05 5
             "pmullw %%mm2, %%mm4                    \n\t"
             "pmullw %%mm2, %%mm5                    \n\t"
-            "movq "MANGLE(w20)", %%mm2              \n\t" // 32
+            "movq (%6)"/*MANGLE(w20)*/", %%mm2      \n\t" // w20 32
             "paddw %%mm2, %%mm4                     \n\t"
             "paddw %%mm2, %%mm5                     \n\t"
             "psrlw $6, %%mm4                        \n\t"
@@ -3060,7 +3074,7 @@ static av_always_inline void RENAME(do_a_deblock)(uint8_t *src, int step, int st
             "movq %%mm0, (%0, %1)                   \n\t"
 
             : "+r" (temp_src)
-            : "r" ((x86_reg)step), "m" (c->pQPb), "m"(eq_mask), "r"(tmp)
+            : "r" ((x86_reg)step), "m" (c->pQPb), "m"(eq_mask), "r"(tmp), "m"(w05), "m"(w20)
             : "%"REG_a
         );
     }

@@ -86,6 +86,14 @@ DECLARE_ASM_CONST(8, uint64_t, mul16_mid)    = 0x2080208020802080ULL;
 #define RV ((int)( 0.439*(1<<RGB2YUV_SHIFT)+0.5))
 #define RU ((int)(-0.148*(1<<RGB2YUV_SHIFT)+0.5))
 
+// declared in swscale_mmx.c (and referenced from rgb2rgb_template.c)
+DECLARE_ALIGNED(8, extern const uint64_t, ff_bgr2YOffset);  
+DECLARE_ALIGNED(8, extern const uint64_t, ff_bgr2YCoeff);
+DECLARE_ALIGNED(8, extern const uint64_t, ff_w1111);
+DECLARE_ALIGNED(8, extern const uint64_t, ff_bgr2UCoeff);
+DECLARE_ALIGNED(8, extern const uint64_t, ff_bgr2VCoeff);
+DECLARE_ALIGNED(8, extern const uint64_t, ff_bgr2UVOffset);
+
 // Note: We have C, MMX, MMXEXT, 3DNOW versions, there is no 3DNOW + MMXEXT one.
 
 #define COMPILE_TEMPLATE_MMXEXT 0

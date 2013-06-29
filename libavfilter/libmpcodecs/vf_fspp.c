@@ -75,7 +75,7 @@ static const short custom_threshold[64]=
   20,  27,  26,  23,  20,  15,  11,   5
 };
 
-static const uint8_t  __attribute__((aligned(32))) dither[8][8]={
+DECLARE_ALIGNED(32, const int8_t, dither)[8][8] = {
     {  0,  48,  12,  60,   3,  51,  15,  63, },
     { 32,  16,  44,  28,  35,  19,  47,  31, },
     {  8,  56,   4,  52,  11,  59,   7,  55, },
@@ -215,11 +215,11 @@ static void store_slice_mmx(uint8_t *dst, int16_t *src, long dst_stride, long sr
         "psraw %%mm5, %%mm3            \n\t"
         "psraw %%mm5, %%mm4            \n\t"
         "1:                        \n\t"
-        "movq %%mm7, (%%"REG_S",%%"REG_a",)     \n\t"
+        "movq %%mm7, (%%"REG_S",%%"REG_a")     \n\t"
         "movq (%%"REG_S"), %%mm0           \n\t"
         "movq 8(%%"REG_S"), %%mm1          \n\t"
 
-        "movq %%mm7, 8(%%"REG_S",%%"REG_a",)    \n\t"
+        "movq %%mm7, 8(%%"REG_S",%%"REG_a")    \n\t"
         "paddw %%mm3, %%mm0            \n\t"
         "paddw %%mm4, %%mm1            \n\t"
 
@@ -286,15 +286,15 @@ static void store_slice2_mmx(uint8_t *dst, int16_t *src, long dst_stride, long s
         "movq 8(%%"REG_S"), %%mm1          \n\t"
         "paddw %%mm3, %%mm0            \n\t"
 
-        "paddw (%%"REG_S",%%"REG_a",), %%mm0    \n\t"
+        "paddw (%%"REG_S",%%"REG_a"), %%mm0    \n\t"
         "paddw %%mm4, %%mm1            \n\t"
-        "movq 8(%%"REG_S",%%"REG_a",), %%mm6    \n\t"
+        "movq 8(%%"REG_S",%%"REG_a"), %%mm6    \n\t"
 
-        "movq %%mm7, (%%"REG_S",%%"REG_a",)     \n\t"
+        "movq %%mm7, (%%"REG_S",%%"REG_a")     \n\t"
         "psraw %%mm2, %%mm0            \n\t"
         "paddw %%mm6, %%mm1            \n\t"
 
-        "movq %%mm7, 8(%%"REG_S",%%"REG_a",)    \n\t"
+        "movq %%mm7, 8(%%"REG_S",%%"REG_a")    \n\t"
         "psraw %%mm2, %%mm1            \n\t"
         "packuswb %%mm1, %%mm0         \n\t"
 
@@ -416,7 +416,7 @@ static void filter(struct vf_priv_s *p, uint8_t *dst, uint8_t *src,
     const int stride= is_luma ? p->temp_stride : (width+16);//((width+16+15)&(~15))
     const int step=6-p->log2_count;
     const int qps= 3 + is_luma;
-    int32_t __attribute__((aligned(32))) block_align[4*8*BLOCKSZ+ 4*8*BLOCKSZ];
+    DECLARE_ALIGNED(32, int32_t, block_align)[4*8*BLOCKSZ+ 4*8*BLOCKSZ];
     int16_t *block= (int16_t *)block_align;
     int16_t *block3=(int16_t *)(block_align+4*8*BLOCKSZ);
 
@@ -873,7 +873,7 @@ static void column_fidct_c(int16_t* thr_adr, int16_t *data, int16_t *output, int
 
 static void column_fidct_mmx(int16_t* thr_adr,  int16_t *data,  int16_t *output,  int cnt)
 {
-    uint64_t __attribute__((aligned(8))) temps[4];
+    DECLARE_ALIGNED(8, uint64_t, temps)[4];
     __asm__ volatile(
         ASMALIGN(4)
         "1:                   \n\t"
@@ -918,7 +918,7 @@ static void column_fidct_mmx(int16_t* thr_adr,  int16_t *data,  int16_t *output,
         "paddusw 0*16(%%"REG_d"), %%mm5    \n\t"
         "paddusw %%mm6, %%mm2          \n\t"
 
-        "pmulhw "MANGLE(ff_MM_FIX_0_707106781)", %%mm7 \n\t"
+        "pmulhw  %5"/*MANGLE(ff_MM_FIX_0_707106781)*/", %%mm7 \n\t"
         //
         "paddw 0*16(%%"REG_d"), %%mm5      \n\t"
         "paddw %%mm6, %%mm2            \n\t"
@@ -929,7 +929,7 @@ static void column_fidct_mmx(int16_t* thr_adr,  int16_t *data,  int16_t *output,
 //This func is totally compute-bound,  operates at huge speed. So,  DC shortcut
 // at this place isn't worthwhile due to BTB miss penalty (checked on Pent. 3).
 //However,  typical numbers: nondc - 29%%,  dc - 46%%,  zero - 25%%. All <> 0 case is very rare.
-        "paddw "MANGLE(MM_2)", %%mm5            \n\t"
+        "paddw   %6"/*MANGLE(MM_2)*/", %%mm5            \n\t"
         "movq %%mm2, %%mm6             \n\t"
 
         "paddw %%mm5, %%mm2            \n\t"
@@ -971,7 +971,7 @@ static void column_fidct_mmx(int16_t* thr_adr,  int16_t *data,  int16_t *output,
         "psraw $2, %%mm6              \n\t" //paddw mm6, MM_2 !!    ---
         "movq %%mm2, %%mm7             \n\t"
 
-        "pmulhw "MANGLE(MM_FIX_1_414213562_A)", %%mm1 \n\t"
+        "pmulhw   %7"/*MANGLE(MM_FIX_1_414213562_A)*/", %%mm1 \n\t"
         "paddw %%mm6, %%mm2            \n\t" //'t0
 
         "movq %%mm2, 0*8+%3            \n\t" //!
@@ -995,16 +995,16 @@ static void column_fidct_mmx(int16_t* thr_adr,  int16_t *data,  int16_t *output,
         "psllw $2, %%mm3              \n\t"
         "psllw $2, %%mm7              \n\t" //opt for P6
 
-        "pmulhw "MANGLE(MM_FIX_0_382683433)", %%mm3 \n\t"
+        "pmulhw %9"/*MANGLE(MM_FIX_0_382683433)*/", %%mm3 \n\t"
         "psllw $2, %%mm4              \n\t"
 
-        "pmulhw "MANGLE(ff_MM_FIX_0_541196100)", %%mm7 \n\t"
+        "pmulhw %11"/*MANGLE(ff_MM_FIX_0_541196100)*/", %%mm7 \n\t"
         "psllw $2, %%mm2              \n\t"
 
-        "pmulhw "MANGLE(MM_FIX_1_306562965)", %%mm4 \n\t"
+        "pmulhw  %12"/*MANGLE(MM_FIX_1_306562965)*/", %%mm4 \n\t"
         "paddw %%mm1, %%mm5            \n\t" //'t1
 
-        "pmulhw "MANGLE(ff_MM_FIX_0_707106781)", %%mm2 \n\t"
+        "pmulhw %5"/*MANGLE(ff_MM_FIX_0_707106781)*/", %%mm2 \n\t"
         "psubw %%mm1, %%mm6            \n\t" //'t2
         // t7 't12 't11 t4 t6 - 't13 't10   ---
 
@@ -1079,20 +1079,20 @@ static void column_fidct_mmx(int16_t* thr_adr,  int16_t *data,  int16_t *output,
         "movq 0*8+%3, %%mm4            \n\t"
         "movq %%mm0, %%mm1             \n\t"
 
-        "pmulhw "MANGLE(MM_FIX_0_847759065)", %%mm0 \n\t" //tmp6
+        "pmulhw %13"/*MANGLE(MM_FIX_0_847759065)*/", %%mm0 \n\t" //tmp6
         "movq %%mm1, %%mm2             \n\t"
 
         "movq "DCTSIZE_S"*0*2(%%"REG_D"), %%mm5 \n\t"
         "movq %%mm2, %%mm3             \n\t"
 
-        "pmulhw "MANGLE(MM_FIX_0_566454497)", %%mm1 \n\t" //tmp5
+        "pmulhw  %14"/*MANGLE(MM_FIX_0_566454497)*/", %%mm1 \n\t" //tmp5
         "paddw %%mm4, %%mm5            \n\t"
 
         "movq 1*8+%3, %%mm6            \n\t"
         //paddw mm3, MM_2
         "psraw $2, %%mm3              \n\t" //tmp7
 
-        "pmulhw "MANGLE(MM_FIX_0_198912367)", %%mm2 \n\t" //-tmp4
+        "pmulhw  %15"/*MANGLE(MM_FIX_0_198912367)*/", %%mm2 \n\t" //-tmp4
         "psubw %%mm3, %%mm4            \n\t"
 
         "movq "DCTSIZE_S"*1*2(%%"REG_D"), %%mm7 \n\t"
@@ -1158,13 +1158,13 @@ static void column_fidct_mmx(int16_t* thr_adr,  int16_t *data,  int16_t *output,
         "movq %%mm5, %%mm1             \n\t"
         "psllw $1, %%mm0              \n\t" //'z12
 
-        "pmulhw "MANGLE(MM_FIX_2_613125930)", %%mm1 \n\t" //-
+        "pmulhw %16"/*MANGLE(MM_FIX_2_613125930)*/", %%mm1 \n\t" //-
         "paddw %%mm0, %%mm5            \n\t"
 
-        "pmulhw "MANGLE(MM_FIX_1_847759065)", %%mm5 \n\t" //'z5
+        "pmulhw %17"/*MANGLE(MM_FIX_1_847759065)*/", %%mm5 \n\t" //'z5
         "paddw %%mm6, %%mm2            \n\t" //'z11
 
-        "pmulhw "MANGLE(MM_FIX_1_082392200)", %%mm0 \n\t"
+        "pmulhw %18"/*MANGLE(MM_FIX_1_082392200)*/", %%mm0 \n\t"
         "movq %%mm2, %%mm7             \n\t"
 
         //---
@@ -1174,7 +1174,7 @@ static void column_fidct_mmx(int16_t* thr_adr,  int16_t *data,  int16_t *output,
         "psllw $1, %%mm2              \n\t"
         "paddw %%mm3, %%mm7            \n\t" //'t7
 
-        "pmulhw "MANGLE(MM_FIX_1_414213562)", %%mm2 \n\t" //'t11
+        "pmulhw %10"/*MANGLE(MM_FIX_1_414213562)*/", %%mm2 \n\t" //'t11
         "movq %%mm4, %%mm6             \n\t"
         //paddw mm7, MM_2
         "psraw $2, %%mm7              \n\t"
@@ -1276,7 +1276,7 @@ static void column_fidct_mmx(int16_t* thr_adr,  int16_t *data,  int16_t *output,
         "paddusw 1*8+0*16(%%"REG_d"), %%mm5 \n\t"
         "paddusw %%mm6, %%mm2          \n\t"
 
-        "pmulhw "MANGLE(ff_MM_FIX_0_707106781)", %%mm7 \n\t"
+        "pmulhw %5"/*MANGLE(ff_MM_FIX_0_707106781)*/", %%mm7 \n\t"
         //
         "paddw 1*8+0*16(%%"REG_d"), %%mm5  \n\t"
         "paddw %%mm6, %%mm2            \n\t"
@@ -1287,7 +1287,7 @@ static void column_fidct_mmx(int16_t* thr_adr,  int16_t *data,  int16_t *output,
 //This func is totally compute-bound,  operates at huge speed. So,  DC shortcut
 // at this place isn't worthwhile due to BTB miss penalty (checked on Pent. 3).
 //However,  typical numbers: nondc - 29%%,  dc - 46%%,  zero - 25%%. All <> 0 case is very rare.
-        "paddw "MANGLE(MM_2)", %%mm5            \n\t"
+        "paddw %6"/*MANGLE(MM_2)*/", %%mm5            \n\t"
         "movq %%mm2, %%mm6             \n\t"
 
         "paddw %%mm5, %%mm2            \n\t"
@@ -1329,7 +1329,7 @@ static void column_fidct_mmx(int16_t* thr_adr,  int16_t *data,  int16_t *output,
         "psraw $2, %%mm6              \n\t" //paddw mm6, MM_2 !!    ---
         "movq %%mm2, %%mm7             \n\t"
 
-        "pmulhw "MANGLE(MM_FIX_1_414213562_A)", %%mm1 \n\t"
+        "pmulhw %7"/*MANGLE(MM_FIX_1_414213562_A)*/", %%mm1              \n\t"
         "paddw %%mm6, %%mm2            \n\t" //'t0
 
         "movq %%mm2, 0*8+%3            \n\t" //!
@@ -1353,16 +1353,16 @@ static void column_fidct_mmx(int16_t* thr_adr,  int16_t *data,  int16_t *output,
         "psllw $2, %%mm3              \n\t"
         "psllw $2, %%mm7              \n\t" //opt for P6
 
-        "pmulhw "MANGLE(MM_FIX_0_382683433)", %%mm3 \n\t"
+        "pmulhw %9"/*MANGLE(MM_FIX_0_382683433)*/", %%mm3 \n\t"
         "psllw $2, %%mm4              \n\t"
 
-        "pmulhw "MANGLE(ff_MM_FIX_0_541196100)", %%mm7 \n\t"
+        "pmulhw %19"/*MANGLE(ff_MM_FIX_0_541196100)*/", %%mm7 \n\t"
         "psllw $2, %%mm2              \n\t"
 
-        "pmulhw "MANGLE(MM_FIX_1_306562965)", %%mm4 \n\t"
+        "pmulhw %20"/*MANGLE(MM_FIX_1_306562965)*/", %%mm4 \n\t"
         "paddw %%mm1, %%mm5            \n\t" //'t1
 
-        "pmulhw "MANGLE(ff_MM_FIX_0_707106781)", %%mm2 \n\t"
+        "pmulhw %5"/*MANGLE(ff_MM_FIX_0_707106781)*/", %%mm2 \n\t"
         "psubw %%mm1, %%mm6            \n\t" //'t2
         // t7 't12 't11 t4 t6 - 't13 't10   ---
 
@@ -1437,20 +1437,20 @@ static void column_fidct_mmx(int16_t* thr_adr,  int16_t *data,  int16_t *output,
         "movq 0*8+%3, %%mm4            \n\t"
         "movq %%mm0, %%mm1             \n\t"
 
-        "pmulhw "MANGLE(MM_FIX_0_847759065)", %%mm0 \n\t" //tmp6
+        "pmulhw %13"/*MANGLE(MM_FIX_0_847759065)*/", %%mm0 \n\t" //tmp6
         "movq %%mm1, %%mm2             \n\t"
 
         "movq "DCTSIZE_S"*0*2(%%"REG_D"), %%mm5 \n\t"
         "movq %%mm2, %%mm3             \n\t"
 
-        "pmulhw "MANGLE(MM_FIX_0_566454497)", %%mm1 \n\t" //tmp5
+        "pmulhw %14"/*MANGLE(MM_FIX_0_566454497)*/", %%mm1 \n\t" //tmp5
         "paddw %%mm4, %%mm5            \n\t"
 
         "movq 1*8+%3, %%mm6            \n\t"
         //paddw mm3, MM_2
         "psraw $2, %%mm3              \n\t" //tmp7
 
-        "pmulhw "MANGLE(MM_FIX_0_198912367)", %%mm2 \n\t" //-tmp4
+        "pmulhw %15"/*MANGLE(MM_FIX_0_198912367)*/", %%mm2 \n\t" //-tmp4
         "psubw %%mm3, %%mm4            \n\t"
 
         "movq "DCTSIZE_S"*1*2(%%"REG_D"), %%mm7 \n\t"
@@ -1518,13 +1518,13 @@ static void column_fidct_mmx(int16_t* thr_adr,  int16_t *data,  int16_t *output,
         "movq %%mm5, %%mm1             \n\t"
         "psllw $1, %%mm0              \n\t" //'z12
 
-        "pmulhw "MANGLE(MM_FIX_2_613125930)", %%mm1 \n\t" //-
+        "pmulhw %16"/*MANGLE(MM_FIX_2_613125930)*/", %%mm1 \n\t" //-
         "paddw %%mm0, %%mm5            \n\t"
 
-        "pmulhw "MANGLE(MM_FIX_1_847759065)", %%mm5 \n\t" //'z5
+        "pmulhw %17"/*MANGLE(MM_FIX_1_847759065)*/", %%mm5 \n\t" //'z5
         "paddw %%mm6, %%mm2            \n\t" //'z11
 
-        "pmulhw "MANGLE(MM_FIX_1_082392200)", %%mm0 \n\t"
+        "pmulhw %18"/*MANGLE(MM_FIX_1_082392200)*/", %%mm0 \n\t"
         "movq %%mm2, %%mm7             \n\t"
 
         //---
@@ -1534,7 +1534,7 @@ static void column_fidct_mmx(int16_t* thr_adr,  int16_t *data,  int16_t *output,
         "psllw $1, %%mm2              \n\t"
         "paddw %%mm3, %%mm7            \n\t" //'t7
 
-        "pmulhw "MANGLE(MM_FIX_1_414213562)", %%mm2 \n\t" //'t11
+        "pmulhw %8"/*MANGLE(MM_FIX_1_414213562)*/", %%mm2 \n\t" //'t11
         "movq %%mm4, %%mm6             \n\t"
         //paddw mm7, MM_2
         "psraw $2, %%mm7              \n\t"
@@ -1597,7 +1597,10 @@ static void column_fidct_mmx(int16_t* thr_adr,  int16_t *data,  int16_t *output,
         "5:                      \n\t"
 
         : "+S"(data), "+D"(output), "+c"(cnt), "=o"(temps)
-        : "d"(thr_adr)
+        : "d"(thr_adr), "m"(ff_MM_FIX_0_707106781), "m"(MM_2), "m"(MM_FIX_1_414213562_A),"m"(MM_FIX_1_414213562),"m"(MM_FIX_0_382683433),
+          /*10*/"m"(MM_FIX_1_414213562), "m"(ff_MM_FIX_0_541196100),"m"(MM_FIX_1_306562965),"m"(MM_FIX_0_847759065),"m"(MM_FIX_0_566454497),
+          /*15*/"m"(MM_FIX_0_198912367),"m"(MM_FIX_2_613125930),"m"(MM_FIX_1_847759065),"m"(MM_FIX_1_082392200),"m"(ff_MM_FIX_0_541196100),
+          "m"(MM_FIX_1_306562965)
         : "%"REG_a
         );
 }
@@ -1674,7 +1677,7 @@ static void row_idct_c(int16_t* workspace,
 static void row_idct_mmx (int16_t* workspace,
                           int16_t* output_adr,  int output_stride,  int cnt)
 {
-    uint64_t __attribute__((aligned(8))) temps[4];
+    DECLARE_ALIGNED(8, uint64_t, temps)[4];
     __asm__ volatile(
         "lea (%%"REG_a",%%"REG_a",2), %%"REG_d"    \n\t"
         "1:                     \n\t"
@@ -1703,7 +1706,7 @@ static void row_idct_mmx (int16_t* workspace,
         "punpckhwd %%mm3, %%mm7        \n\t"
         "psubw %%mm6, %%mm0            \n\t"
 
-        "pmulhw "MANGLE(MM_FIX_1_414213562_A)", %%mm0 \n\t"
+        "pmulhw %5"/*MANGLE(MM_FIX_1_414213562_A)*/", %%mm0 \n\t"
         "movq %%mm4, %%mm2             \n\t"
 
         "punpckldq %%mm7, %%mm4        \n\t" //2
@@ -1765,19 +1768,19 @@ static void row_idct_mmx (int16_t* workspace,
         "movq %%mm3, %%mm0             \n\t"
         "psubw %%mm5, %%mm4            \n\t" //z12
 
-        "pmulhw "MANGLE(MM_FIX_2_613125930)", %%mm0 \n\t" //-
+        "pmulhw %6"/*MANGLE(MM_FIX_2_613125930)*/", %%mm0 \n\t" //-
         "paddw %%mm4, %%mm3            \n\t"
 
-        "pmulhw "MANGLE(MM_FIX_1_847759065)", %%mm3 \n\t" //z5
+        "pmulhw %7"/*MANGLE(MM_FIX_1_847759065)*/", %%mm3 \n\t" //z5
         "paddw %%mm5, %%mm2            \n\t" //z11  >
 
-        "pmulhw "MANGLE(MM_FIX_1_082392200)", %%mm4 \n\t"
+        "pmulhw %8"/*MANGLE(MM_FIX_1_082392200)*/", %%mm4 \n\t"
         "movq %%mm2, %%mm5             \n\t"
 
         "psubw %%mm6, %%mm2            \n\t"
         "paddw %%mm6, %%mm5            \n\t" //t7
 
-        "pmulhw "MANGLE(MM_FIX_1_414213562)", %%mm2 \n\t" //t11
+        "pmulhw %9"/*MANGLE(MM_FIX_1_414213562)*/", %%mm2 \n\t" //t11
         "paddw %%mm3, %%mm0            \n\t" //t12
 
         "psllw $3, %%mm0              \n\t"
@@ -1801,7 +1804,7 @@ static void row_idct_mmx (int16_t* workspace,
         "paddw %%mm2, %%mm7            \n\t" //d2
         "psubw %%mm2, %%mm0            \n\t" //d5
 
-        "movq "MANGLE(MM_DESCALE_RND)", %%mm2   \n\t" //4
+        "movq %10"/*MANGLE(MM_DESCALE_RND)*/", %%mm2   \n\t" //4
         "psubw %%mm5, %%mm6            \n\t" //d7
 
         "paddw 0*8+%3, %%mm5           \n\t" //d0
@@ -1816,7 +1819,7 @@ static void row_idct_mmx (int16_t* workspace,
         "paddw (%%"REG_D"), %%mm5          \n\t"
         "psraw $3, %%mm7              \n\t"
 
-        "paddw (%%"REG_D",%%"REG_a",), %%mm1    \n\t"
+        "paddw (%%"REG_D",%%"REG_a"), %%mm1    \n\t"
         "paddw %%mm2, %%mm0            \n\t"
 
         "paddw (%%"REG_D",%%"REG_a",2), %%mm7   \n\t"
@@ -1825,7 +1828,7 @@ static void row_idct_mmx (int16_t* workspace,
         "movq %%mm5, (%%"REG_D")           \n\t"
         "paddw %%mm2, %%mm6            \n\t"
 
-        "movq %%mm1, (%%"REG_D",%%"REG_a",)     \n\t"
+        "movq %%mm1, (%%"REG_D",%%"REG_a")     \n\t"
         "psraw $3, %%mm0              \n\t"
 
         "movq %%mm7, (%%"REG_D",%%"REG_a",2)    \n\t"
@@ -1837,7 +1840,7 @@ static void row_idct_mmx (int16_t* workspace,
         "paddw (%%"REG_D",%%"REG_a",2), %%mm0   \n\t"
         "psubw %%mm4, %%mm5            \n\t" //d3
 
-        "paddw (%%"REG_D",%%"REG_d",), %%mm3    \n\t"
+        "paddw (%%"REG_D",%%"REG_d"), %%mm3    \n\t"
         "psraw $3, %%mm6              \n\t"
 
         "paddw 1*8+%3, %%mm4           \n\t" //d4
@@ -1852,13 +1855,13 @@ static void row_idct_mmx (int16_t* workspace,
         "paddw (%%"REG_D"), %%mm5          \n\t"
         "psraw $3, %%mm4              \n\t"
 
-        "paddw (%%"REG_D",%%"REG_a",), %%mm4    \n\t"
+        "paddw (%%"REG_D",%%"REG_a"), %%mm4    \n\t"
         "add $"DCTSIZE_S"*2*4, %%"REG_S"      \n\t" //4 rows
 
-        "movq %%mm3, (%%"REG_D",%%"REG_d",)     \n\t"
+        "movq %%mm3, (%%"REG_D",%%"REG_d")     \n\t"
         "movq %%mm6, (%%"REG_D",%%"REG_a",4)    \n\t"
         "movq %%mm5, (%%"REG_D")           \n\t"
-        "movq %%mm4, (%%"REG_D",%%"REG_a",)     \n\t"
+        "movq %%mm4, (%%"REG_D",%%"REG_a")     \n\t"
 
         "sub %%"REG_d", %%"REG_D"             \n\t"
         "add $8, %%"REG_D"               \n\t"
@@ -1866,7 +1869,9 @@ static void row_idct_mmx (int16_t* workspace,
         "jnz 1b                  \n\t"
 
         : "+S"(workspace), "+D"(output_adr), "+c"(cnt), "=o"(temps)
-        : "a"(output_stride*sizeof(short))
+        : "a"(output_stride*sizeof(short)),"m"(MM_FIX_1_414213562_A),
+          "m"(MM_FIX_2_613125930),"m"(MM_FIX_1_847759065),"m"(MM_FIX_1_082392200),
+          "m"(MM_FIX_1_414213562),"m"(MM_DESCALE_RND)
         : "%"REG_d
         );
 }
@@ -1940,14 +1945,18 @@ static void row_fdct_c(int16_t *data, const uint8_t *pixels, int line_size, int 
 
 static void row_fdct_mmx(int16_t *data,  const uint8_t *pixels,  int line_size,  int cnt)
 {
-    uint64_t __attribute__((aligned(8))) temps[4];
+    DECLARE_ALIGNED(8, uint64_t, temps)[4];
     __asm__ volatile(
-        "lea (%%"REG_a",%%"REG_a",2), %%"REG_d"    \n\t"
+        "lea %3, %%"REG_b"           \n\t"
+        //"lea (%%"REG_a",%%"REG_a",2), %%"REG_d"    \n\t"
+        "mov %%"REG_a",%%"REG_d"     \n\t"
+        "add %%"REG_a",%%"REG_d"     \n\t"
+        "add %%"REG_a",%%"REG_d"     \n\t"
         "6:                     \n\t"
         "movd (%%"REG_S"), %%mm0           \n\t"
         "pxor %%mm7, %%mm7             \n\t"
 
-        "movd (%%"REG_S",%%"REG_a",), %%mm1     \n\t"
+        "movd (%%"REG_S",%%"REG_a"), %%mm1     \n\t"
         "punpcklbw %%mm7, %%mm0        \n\t"
 
         "movd (%%"REG_S",%%"REG_a",2), %%mm2    \n\t"
@@ -1962,7 +1971,7 @@ static void row_fdct_mmx(int16_t *data,  const uint8_t *pixels,  int line_size, 
         "movd (%%"REG_S",%%"REG_a",4), %%mm3    \n\t" //7  ;prefetch!
         "movq %%mm1, %%mm6             \n\t"
 
-        "movd (%%"REG_S",%%"REG_d",), %%mm4     \n\t" //6
+        "movd (%%"REG_S",%%"REG_d"), %%mm4     \n\t" //6
         "punpcklbw %%mm7, %%mm3        \n\t"
 
         "psubw %%mm3, %%mm5            \n\t"
@@ -1974,16 +1983,16 @@ static void row_fdct_mmx(int16_t *data,  const uint8_t *pixels,  int line_size, 
         "movd (%%"REG_S",%%"REG_a",2), %%mm3    \n\t" //5
         "paddw %%mm4, %%mm1            \n\t"
 
-        "movq %%mm5, 0*8+%3            \n\t" //t7
+        "movq %%mm5, %3            \n\t" //t7
         "punpcklbw %%mm7, %%mm3        \n\t"
 
-        "movq %%mm6, 1*8+%3            \n\t" //t6
+        "movq %%mm6, 1*8(%%"REG_b")    \n\t" //t6
         "movq %%mm2, %%mm4             \n\t"
 
         "movd (%%"REG_S"), %%mm5           \n\t" //3
         "paddw %%mm3, %%mm2            \n\t"
 
-        "movd (%%"REG_S",%%"REG_a",), %%mm6     \n\t" //4
+        "movd (%%"REG_S",%%"REG_a"), %%mm6     \n\t" //4
         "punpcklbw %%mm7, %%mm5        \n\t"
 
         "psubw %%mm3, %%mm4            \n\t"
@@ -2007,7 +2016,7 @@ static void row_fdct_mmx(int16_t *data,  const uint8_t *pixels,  int line_size, 
         "psllw $2, %%mm1              \n\t"
         "paddw %%mm5, %%mm6            \n\t" //t10
 
-        "pmulhw "MANGLE(ff_MM_FIX_0_707106781)", %%mm1 \n\t"
+        "pmulhw %5"/*"MANGLE(ff_MM_FIX_0_707106781)*/", %%mm1 \n\t"
         "paddw %%mm6, %%mm7            \n\t" //d2
 
         "psubw %%mm2, %%mm6            \n\t" //d3
@@ -2023,7 +2032,7 @@ static void row_fdct_mmx(int16_t *data,  const uint8_t *pixels,  int line_size, 
         "psubw %%mm1, %%mm5            \n\t" //d1
         "movq %%mm0, %%mm6             \n\t"
 
-        "movq 1*8+%3, %%mm1            \n\t"
+        "movq 1*8(%%"REG_b"), %%mm1            \n\t"
         "punpcklwd %%mm5, %%mm0        \n\t"
 
         "punpckhwd %%mm5, %%mm6        \n\t"
@@ -2047,22 +2056,22 @@ static void row_fdct_mmx(int16_t *data,  const uint8_t *pixels,  int line_size, 
         "movq %%mm7, "DCTSIZE_S"*3*2(%%"REG_D") \n\t"
         "psllw $2, %%mm3              \n\t" //t10
 
-        "movq 0*8+%3, %%mm2           \n\t"
+        "movq %3, %%mm2               \n\t" //"movq 0*8+%3, %%mm2           \n\t"
         "psllw $2, %%mm4              \n\t" //t11
 
-        "pmulhw "MANGLE(ff_MM_FIX_0_707106781)", %%mm4 \n\t" //z3
+        "pmulhw %5"/*MANGLE(ff_MM_FIX_0_707106781)*/", %%mm4 \n\t" //z3
         "paddw %%mm2, %%mm1            \n\t"
 
         "psllw $2, %%mm1              \n\t" //t12
         "movq %%mm3, %%mm0             \n\t"
 
-        "pmulhw "MANGLE(ff_MM_FIX_0_541196100)", %%mm0 \n\t"
+        "pmulhw %6"/*MANGLE(ff_MM_FIX_0_541196100)*/", %%mm0 \n\t"
         "psubw %%mm1, %%mm3            \n\t"
 
-        "pmulhw "MANGLE(MM_FIX_0_382683433)", %%mm3 \n\t" //z5
+        "pmulhw %7"/*MANGLE(MM_FIX_0_382683433)*/", %%mm3 \n\t" //z5
         "movq %%mm2, %%mm5             \n\t"
 
-        "pmulhw "MANGLE(MM_FIX_1_306562965)", %%mm1 \n\t"
+        "pmulhw %8"/*MANGLE(MM_FIX_1_306562965)*/", %%mm1 \n\t"
         "psubw %%mm4, %%mm2            \n\t" //z13
 
         "paddw %%mm4, %%mm5            \n\t" //z11
@@ -2111,8 +2120,8 @@ static void row_fdct_mmx(int16_t *data,  const uint8_t *pixels,  int line_size, 
         "jnz 6b                  \n\t"
 
         : "+S"(pixels), "+D"(data), "+c"(cnt), "=o"(temps)
-        : "a"(line_size)
-        : "%"REG_d);
+        : "a"(line_size), "m"(ff_MM_FIX_0_707106781), "m"(ff_MM_FIX_0_541196100),"m"(MM_FIX_0_382683433),"m"(MM_FIX_1_306562965)
+        : "%"REG_d, "%"REG_b);
 }
 
 #endif // HAVE_MMX
