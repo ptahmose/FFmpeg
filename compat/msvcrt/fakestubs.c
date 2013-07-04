@@ -265,3 +265,5 @@ int ff_xv_muxer;
 int ff_v4l2_muxer;
 int avfilter_vf_zmq;
 int avfilter_af_azmq;
+
+int ff_libgme_demuxer;
