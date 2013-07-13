@@ -1,3 +1,5 @@
+#include "config.h"
+
 int ff_aac_coder_init_mips;
 int ff_psdsp_init_arm;
 int ff_psdsp_init_mips;
@@ -7,8 +9,10 @@ int ff_acelp_vectors_init_mips;
 int ff_libaacplus_encoder;
 int ff_libxvid_encoder;
 int ff_libxavs_encoder;
-int ff_libx264rgb_encoder;
-int ff_libx264_encoder;
+#if !CONFIG_LIBX264
+ int ff_libx264rgb_encoder;
+ int ff_libx264_encoder;
+#endif
 int ff_libwavpack_encoder;
 int ff_libvpx_vp9_decoder;
 int ff_libvpx_vp9_encoder;
