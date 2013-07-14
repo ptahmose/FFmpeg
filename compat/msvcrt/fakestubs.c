@@ -51,8 +51,10 @@ int ff_libfaac_encoder;
 int ff_libcelt_decoder;
 int ff_zmbv_decoder;
 int ff_zmbv_encoder;
-int ff_zlib_decoder;
-int ff_zlib_encoder;
+#if !CONFIG_ZLIB
+ int ff_zlib_decoder;
+ int ff_zlib_encoder;
+#endif
 int ff_zerocodec_decoder;
 int ff_wmv3_vdpau_decoder;
 int ff_wmv3_crystalhd_decoder;
