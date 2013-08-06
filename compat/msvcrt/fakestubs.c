@@ -236,3 +236,4 @@ int ff_vp3dsp_init_ppc;
 int ff_vp56dsp_init_arm;
 int ff_vp8dsp_init_arm;
 int ff_vp8dsp_init_ppc;
+int ff_unix_protocol;
