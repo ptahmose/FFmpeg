@@ -249,3 +249,8 @@ int ff_vp6dsp_init_arm;
 int ff_yuv2rgb_init_bfin;
 int ff_yuv2rgb_init_ppc;
 int ff_yuv2rgb_init_tables_ppc;
+
+int ff_libzvbi_teletext;
+int avfilter_af_ladspa;
+int ff_libssh_protocol;
+int ff_libzvbi_teletext_decoder;
