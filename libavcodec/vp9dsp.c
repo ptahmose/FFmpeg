@@ -1477,7 +1477,7 @@ static av_cold void vp9dsp_itxfm_init(VP9DSPContext *dsp)
 }
 
 static av_always_inline void loop_filter(uint8_t *dst,  ptrdiff_t stride,
-                                         int E, int I, int H,
+                                         int _E, int _I, int H,
                                          ptrdiff_t stridea, ptrdiff_t strideb,
                                          int wd)
 {
@@ -1490,10 +1490,10 @@ static av_always_inline void loop_filter(uint8_t *dst,  ptrdiff_t stride,
         int q0 = dst[strideb * +0], q1 = dst[strideb * +1];
         int q2 = dst[strideb * +2], q3 = dst[strideb * +3];
         int q4, q5, q6, q7;
-        int fm = FFABS(p3 - p2) <= I && FFABS(p2 - p1) <= I &&
-                 FFABS(p1 - p0) <= I && FFABS(q1 - q0) <= I &&
-                 FFABS(q2 - q1) <= I && FFABS(q3 - q2) <= I &&
-                 FFABS(p0 - q0) * 2 + (FFABS(p1 - q1) >> 1) <= E;
+        int fm = FFABS(p3 - p2) <= _I && FFABS(p2 - p1) <= _I &&
+                 FFABS(p1 - p0) <= _I && FFABS(q1 - q0) <= _I &&
+                 FFABS(q2 - q1) <= _I && FFABS(q3 - q2) <= _I &&
+                 FFABS(p0 - q0) * 2 + (FFABS(p1 - q1) >> 1) <= _E;
         int flat8out, flat8in;
 
         if (!fm)
@@ -1587,9 +1587,9 @@ static av_always_inline void loop_filter(uint8_t *dst,  ptrdiff_t stride,
 #define lf_8_fn(dir, wd, stridea, strideb) \
 static void loop_filter_##dir##_##wd##_8_c(uint8_t *dst, \
                                            ptrdiff_t stride, \
-                                           int E, int I, int H) \
+                                           int _E, int _I, int H) \
 { \
-    loop_filter(dst, stride, E, I, H, stridea, strideb, wd); \
+    loop_filter(dst, stride, _E, _I, H, stridea, strideb, wd); \
 }
 
 #define lf_8_fns(wd) \
@@ -1606,10 +1606,10 @@ lf_8_fns(16)
 #define lf_16_fn(dir, stridea) \
 static void loop_filter_##dir##_16_16_c(uint8_t *dst, \
                                         ptrdiff_t stride, \
-                                        int E, int I, int H) \
+                                        int _E, int _I, int H) \
 { \
-    loop_filter_##dir##_16_8_c(dst, stride, E, I, H); \
-    loop_filter_##dir##_16_8_c(dst + 8 * stridea, stride, E, I, H); \
+    loop_filter_##dir##_16_8_c(dst, stride, _E, _I, H); \
+    loop_filter_##dir##_16_8_c(dst + 8 * stridea, stride, _E, _I, H); \
 }
 
 lf_16_fn(h, stride)
@@ -1620,10 +1620,10 @@ lf_16_fn(v, 1)
 #define lf_mix_fn(dir, wd1, wd2, stridea) \
 static void loop_filter_##dir##_##wd1##wd2##_16_c(uint8_t *dst, \
                                                   ptrdiff_t stride, \
-                                                  int E, int I, int H) \
+                                                  int _E, int _I, int H) \
 { \
-    loop_filter_##dir##_##wd1##_8_c(dst, stride, E & 0xff, I & 0xff, H & 0xff); \
-    loop_filter_##dir##_##wd2##_8_c(dst + 8 * stridea, stride, E >> 8, I >> 8, H >> 8); \
+    loop_filter_##dir##_##wd1##_8_c(dst, stride, _E & 0xff, _I & 0xff, H & 0xff); \
+    loop_filter_##dir##_##wd2##_8_c(dst + 8 * stridea, stride, _E >> 8, _I >> 8, H >> 8); \
 }
 
 #define lf_mix_fns(wd1, wd2) \
